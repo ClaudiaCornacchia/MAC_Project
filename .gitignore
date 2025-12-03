@@ -1,5 +1,5 @@
 # --------------------
-# 1. SISTEMA OPERATIVO & IDE
+# 1. OPERATING SYSTEM & IDE
 # --------------------
 # Mac
 .DS_Store
@@ -16,10 +16,10 @@ Thumbs.db
 # --------------------
 # 2. BACKEND (Node.js & Docker)
 # --------------------
-# Dipendenze (mai committare, pesano centinaia di MB)
+# Dependencies
 node_modules/
 
-# Build di produzione (se userai TypeScript o build step)
+# Build 
 dist/
 build/
 
@@ -28,12 +28,12 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# SICUREZZA: Variabili d'ambiente e chiavi (CRUCIALE)
+# Environment variables
 .env
 .env.local
 .env.*.local
 
-# Docker (se vuoi ignorare i log o file temporanei docker)
+# Docker 
 docker-compose.override.yml
 
 # --------------------
@@ -43,7 +43,7 @@ docker-compose.override.yml
 .gradle/
 build/
 
-# Local configuration file (sdk path, etc) - Mai committare
+# Local configuration file (sdk path, etc) 
 local.properties
 
 # Build outputs (APK, AAB)
@@ -55,7 +55,10 @@ captures/
 .externalNativeBuild/
 .cxx/
 
-# Keystore files (Chiavi per firmare l'app - PERICOLO SICUREZZA)
+# Keystore files (
 *.jks
 *.keystore
 *.pem
+
+# google-services.json 
+google-services.json
