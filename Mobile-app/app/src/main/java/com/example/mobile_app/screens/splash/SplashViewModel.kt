@@ -1,0 +1,25 @@
+package com.example.mobile_app.screens.splash
+
+import com.example.mobile_app.ACCOUNT_CENTER_SCREEN
+import com.example.mobile_app.SIGN_IN_SCREEN
+import com.example.mobile_app.SPLASH_SCREEN
+import com.example.mobile_app.model.service.AccountService
+import com.example.mobile_app.screens.BoxAppViewModel
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+
+@HiltViewModel
+class SplashViewModel @Inject constructor(
+    private val accountService: AccountService
+) : BoxAppViewModel() {
+
+    fun onAppStart(openAndPopUp: (String, String) -> Unit) {
+        if (accountService.hasUser()) {
+            // L'utente è loggato: vai alla schermata principale (Account/Home)
+            openAndPopUp(ACCOUNT_CENTER_SCREEN, SPLASH_SCREEN)
+        } else {
+            // L'utente NON è loggato: vai alla schermata di Login
+            openAndPopUp(SIGN_IN_SCREEN, SPLASH_SCREEN)
+        }
+    }
+}
