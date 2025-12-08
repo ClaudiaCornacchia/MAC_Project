@@ -8,9 +8,9 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -30,12 +30,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.mobile_app.R
 import com.example.mobile_app.model.User
-import com.example.mobile_app.ui.theme.BoxTheme
 import java.util.Locale
 
 @Composable
@@ -186,7 +184,7 @@ fun Modifier.card(): Modifier {
 fun ExitAppCard(onSignOutClick: () -> Unit) {
     var showExitAppDialog by remember { mutableStateOf(false) }
 
-    AccountCenterCard(stringResource(R.string.sign_out), Icons.Filled.ExitToApp, Modifier.card()) {
+    AccountCenterCard(stringResource(R.string.sign_out), Icons.AutoMirrored.Filled.ExitToApp, Modifier.card()) {
         showExitAppDialog = true
     }
 
