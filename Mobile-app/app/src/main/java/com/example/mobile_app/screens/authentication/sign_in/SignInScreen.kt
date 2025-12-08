@@ -60,7 +60,6 @@ fun SignInScreen(
     val email = viewModel.email.collectAsState()
     val password = viewModel.password.collectAsState()
 
-    // Gestione del BottomSheet per Google Sign-In
     LaunchedEffect(Unit) {
         launchCredManBottomSheet(context) { result ->
             viewModel.onSignInWithGoogle(result, openAndPopUp)
@@ -184,10 +183,3 @@ fun SignInScreen(
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun AuthPreview() {
-    BoxTheme {
-        SignInScreen({}, { _, _ -> })
-    }
-}

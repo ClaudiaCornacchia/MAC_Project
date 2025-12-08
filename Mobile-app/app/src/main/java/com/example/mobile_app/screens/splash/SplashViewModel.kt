@@ -15,10 +15,10 @@ class SplashViewModel @Inject constructor(
 
     fun onAppStart(openAndPopUp: (String, String) -> Unit) {
         if (accountService.hasUser()) {
-            // L'utente è loggato: vai alla schermata principale (Account/Home)
+            // User is logged go to the home page
             openAndPopUp(ACCOUNT_CENTER_SCREEN, SPLASH_SCREEN)
         } else {
-            // L'utente NON è loggato: vai alla schermata di Login
+            // User not logged go to login
             openAndPopUp(SIGN_IN_SCREEN, SPLASH_SCREEN)
         }
     }

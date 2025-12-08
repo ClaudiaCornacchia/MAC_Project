@@ -2,7 +2,7 @@ package com.example.mobile_app.screens.authentication.sign_up
 
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
+
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -31,20 +31,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
+
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.tooling.preview.Preview
+
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.mobile_app.screens.authentication.AuthenticationButton
 import com.example.mobile_app.screens.authentication.launchCredManBottomSheet
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.filled.AccountCircle // O Icons.Filled.Person
+import androidx.compose.material.icons.filled.AccountCircle
 import com.example.mobile_app.R
 
-import com.example.mobile_app.ui.theme.BoxTheme
+
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
@@ -193,10 +193,3 @@ fun SignUpScreen(
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun AuthPreview() {
-    BoxTheme {
-        SignUpScreen({ _, _ -> })
-    }
-}

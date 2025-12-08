@@ -29,7 +29,6 @@ import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import kotlinx.coroutines.launch
 import com.example.mobile_app.R
 
-// Definisco il tag qui per comodità, o spostalo in un file costanti
 const val ERROR_TAG = "BoxAppError"
 
 @Composable
@@ -39,14 +38,14 @@ fun AuthenticationButton(buttonText: Int, onRequestResult: (Credential) -> Unit)
 
     Button(
         onClick = { coroutineScope.launch { launchCredManButtonUI(context, onRequestResult) } },
-        // Usa il colore primario del tema invece di un colore hardcoded
+
         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp, 0.dp)
     ) {
         Icon(
-            // Assicurati di avere 'google_g' nella cartella res/drawable
+
             painter = painterResource(id = R.drawable.google_g),
             modifier = Modifier.padding(horizontal = 16.dp),
             contentDescription = "Google logo"

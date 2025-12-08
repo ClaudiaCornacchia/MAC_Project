@@ -12,8 +12,6 @@ interface AccountService {
 
     suspend fun updateDisplayName(newDisplayName: String)
 
-    // Rimosso createAnonymousAccount e linkAccount...
-    // Aggiunto createAccount per la registrazione standard
     suspend fun createAccount(email: String, password: String)
 
     suspend fun signInWithGoogle(idToken: String)

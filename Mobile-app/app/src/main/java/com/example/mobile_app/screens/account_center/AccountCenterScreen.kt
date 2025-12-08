@@ -47,7 +47,6 @@ fun AccountCenterScreen(
     viewModel: AccountCenterViewModel = hiltViewModel()
 ) {
     val user by viewModel.user.collectAsState(initial = User())
-    // Gestione sicura del provider nel caso fosse vuoto
     val provider = if (user.provider.isNotEmpty()) {
         user.provider.replaceFirstChar { it.titlecase(Locale.getDefault()) }
     } else {
@@ -85,7 +84,7 @@ fun AccountCenterScreen(
                             .padding(bottom = 16.dp)
                     )
 
-                    // ⚠️ ID mostrato solo a scopo dimostrativo/debug
+                    // TODO: remove ID from the page
                     Text(
                         text = String.format(stringResource(R.string.profile_uid), user.id),
                         modifier = Modifier
@@ -243,10 +242,4 @@ fun RemoveAccountCard(onRemoveAccountClick: () -> Unit) {
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun AccountCenterPreview() {
-    BoxTheme {
-        AccountCenterScreen({ })
-    }
-}
+

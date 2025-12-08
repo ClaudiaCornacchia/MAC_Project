@@ -7,7 +7,6 @@ import androidx.credentials.CustomCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
 import com.example.mobile_app.ACCOUNT_CENTER_SCREEN
-import com.example.mobile_app.ERROR_TAG
 import com.example.mobile_app.SIGN_IN_SCREEN
 import com.example.mobile_app.model.service.AccountService
 import com.example.mobile_app.screens.BoxAppViewModel
@@ -18,6 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 
 const val UNEXPECTED_CREDENTIAL = "Unexpected credential type"
+const val ERROR_TAG = "BoxAppError"
 
 @HiltViewModel
 class SignInViewModel @Inject constructor(

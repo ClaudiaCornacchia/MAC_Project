@@ -7,7 +7,6 @@ import androidx.credentials.CustomCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
 import com.example.mobile_app.ACCOUNT_CENTER_SCREEN
-import com.example.mobile_app.ERROR_TAG
 import com.example.mobile_app.SIGN_UP_SCREEN
 import com.example.mobile_app.screens.authentication.isValidEmail
 import com.example.mobile_app.screens.authentication.isValidPassword
@@ -20,6 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 
 const val UNEXPECTED_CREDENTIAL = "Unexpected credential type"
+const val ERROR_TAG = "BoxAppError"
 
 @HiltViewModel
 class SignUpViewModel @Inject constructor(
@@ -61,7 +61,6 @@ class SignUpViewModel @Inject constructor(
                 throw IllegalArgumentException("Passwords do not match")
             }
 
-            // Cambiato da linkAccount a createAccount perché non usiamo account anonimi
             accountService.createAccount(_email.value, _password.value)
             openAndPopUp(ACCOUNT_CENTER_SCREEN, SIGN_UP_SCREEN)
         }
@@ -71,7 +70,7 @@ class SignUpViewModel @Inject constructor(
         launchCatching {
             if (credential is CustomCredential && credential.type == TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
                 val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
-                // Usiamo signInWithGoogle anche qui: se l'account non esiste, Firebase lo crea
+                // Use signInWithGoogle, if the account doesn't exists Firebase creates it
                 accountService.signInWithGoogle(googleIdTokenCredential.idToken)
                 openAndPopUp(ACCOUNT_CENTER_SCREEN, SIGN_UP_SCREEN)
             } else {

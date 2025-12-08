@@ -33,6 +33,7 @@ fun SplashScreen(
         CircularProgressIndicator(color = MaterialTheme.colorScheme.onBackground)
     }
 
+    //This is called as first thing by the app thanks to BoxApp.kt that defined startDestination
     LaunchedEffect(true) {
         delay(SPLASH_TIMEOUT)
         viewModel.onAppStart(openAndPopUp)

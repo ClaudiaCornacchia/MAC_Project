@@ -32,7 +32,6 @@ class AccountCenterViewModel @Inject constructor(
         }
     }
 
-    // Funzione onSignInClick rimossa perché non gestiamo account anonimi
 
     fun onSignOutClick(restartApp: (String) -> Unit) {
         launchCatching {
