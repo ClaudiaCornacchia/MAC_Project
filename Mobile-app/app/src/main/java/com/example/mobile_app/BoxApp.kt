@@ -49,6 +49,20 @@ import androidx.compose.runtime.getValue
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navDeepLink
 import com.example.mobile_app.screens.scan_qr.ScanQrScreen
+import androidx.compose.material.icons.filled.FlashlightOn
+import androidx.compose.material.icons.filled.FlashlightOff
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.platform.LocalContext
+import android.content.Context
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import android.hardware.camera2.CameraManager
+import androidx.compose.runtime.setValue
+
+
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class) // Opt-in required because some Material3 APIs (like Scaffold) might still be experimental
@@ -60,6 +74,53 @@ fun BoxApp() {
 
             val snackbarHostState = remember { SnackbarHostState() }
             val appState = rememberAppState(snackbarHostState)
+            val context = LocalContext.current
+
+            // State to track if the environment is dark
+            var isDarkEnvironment by remember { mutableStateOf(false) }
+            // State to track if the flashlight is currently ON
+            var isFlashlightOn by remember { mutableStateOf(false) }
+
+            DisposableEffect(Unit) {
+                val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+                val lightSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)
+
+                val sensorEventListener = object : SensorEventListener {
+                    override fun onSensorChanged(event: SensorEvent?) {
+                        if (event?.sensor?.type == Sensor.TYPE_LIGHT) {
+                            val lux = event.values[0]
+                            // Threshold: 10 lux is typical for "dim/dark room"
+                            // We use a small buffer to avoid flickering
+                            isDarkEnvironment = lux < 10f
+
+                            // Optional: If it gets bright, auto-turn off flash
+                            if (lux > 50f && isFlashlightOn) {
+                                // You might want to turn it off automatically,
+                                // but for now, we just hide the icon (logic below handles visual)
+                            }
+                        }
+                    }
+                    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+                }
+                // Register listener
+                sensorManager.registerListener(sensorEventListener, lightSensor, SensorManager.SENSOR_DELAY_UI)
+                // Cleanup when app closes
+                onDispose { sensorManager.unregisterListener(sensorEventListener) }
+            }
+
+            // Function to toggle flashlight
+            fun toggleFlashlight() {
+                try {
+                    val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
+                    val cameraId = cameraManager.cameraIdList[0] // Solitamente la camera posteriore
+                    val newState = !isFlashlightOn
+                    cameraManager.setTorchMode(cameraId, newState)
+                    isFlashlightOn = newState
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
 
             // Monitoring the current route to show/hide the top app bar
             val navBackStackEntry by appState.navController.currentBackStackEntryAsState()
@@ -82,7 +143,11 @@ fun BoxApp() {
                     if (showTopBar) {
                         BoxTopAppBar(
                             title = topBarTitle,
-                            onProfileClick = { appState.navigate(ACCOUNT_CENTER_SCREEN) }
+                            onProfileClick = { appState.navigate(ACCOUNT_CENTER_SCREEN) },
+                            // Show icon ONLY if it is dark OR if the flash is already on (so you can turn it off)
+                            showFlashlight = isDarkEnvironment || isFlashlightOn,
+                            isFlashlightOn = isFlashlightOn,
+                            onFlashlightClick = { toggleFlashlight() }
                         )
                     }
                 },
@@ -147,6 +212,9 @@ fun rememberAppState(
 @Composable
 fun BoxTopAppBar(
     title: String,
+    showFlashlight: Boolean,       // Should the icon appear? (Controlled by Light Sensor)
+    isFlashlightOn: Boolean,       // Is the torch currently active?
+    onFlashlightClick: () -> Unit, // Action to toggle torch
     onProfileClick: () -> Unit
 ) {
     TopAppBar(
@@ -156,6 +224,16 @@ fun BoxTopAppBar(
             titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
         ),
         actions = {
+            // Flashlight icon logic
+            if (showFlashlight) {
+                IconButton(onClick = onFlashlightClick) {
+                    Icon(
+                        imageVector = if (isFlashlightOn) Icons.Filled.FlashlightOff else Icons.Filled.FlashlightOn,
+                        contentDescription = "Toggle Flashlight"
+                    )
+                }
+            }
+
             IconButton(onClick = onProfileClick) {
                 Icon(Icons.Filled.AccountCircle, contentDescription = "Profile")
             }
