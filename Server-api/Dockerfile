@@ -22,4 +22,4 @@ EXPOSE 8080
 
 # 7. Command to start the server
 # Ensure your package.json has a "start" script, or modify this line
-CMD ["npm", "start"]
+CMD [ "node", "Server.js" ]
