@@ -1,6 +1,6 @@
 package com.example.mobile_app.model.service
 
-import android.util.Log
+
 import com.example.mobile_app.model.Box
 import com.example.mobile_app.model.QrRequest
 import com.google.firebase.firestore.FirebaseFirestore

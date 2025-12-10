@@ -25,13 +25,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import android.content.Context
-import android.app.DownloadManager
-import android.net.Uri
-import android.os.Environment
 import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.filled.KeyboardArrowDown // Icon for download
 import androidx.compose.material3.OutlinedButton
