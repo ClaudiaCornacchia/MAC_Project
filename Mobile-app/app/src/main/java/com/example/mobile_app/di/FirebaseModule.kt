@@ -1,4 +1,4 @@
-package com.example.mobile_app
+package com.example.mobile_app.di
 
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth

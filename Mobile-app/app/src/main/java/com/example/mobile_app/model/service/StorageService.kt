@@ -1,6 +1,8 @@
 package com.example.mobile_app.model.service
 
+import android.util.Log
 import com.example.mobile_app.model.Box
+import com.example.mobile_app.model.QrRequest
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.dataObjects
@@ -10,10 +12,11 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
-
+import com.example.mobile_app.model.User
 class StorageService @Inject constructor(
     private val firestore: FirebaseFirestore,
-    private val accountService: AccountService
+    private val accountService: AccountService,
+    private val qrApiService: QrApiService
 ) {
 
     // 1. READ ALL: Get all boxes for the current user
@@ -38,13 +41,46 @@ class StorageService @Inject constructor(
     suspend fun saveBox(box: Box) {
         val userId = accountService.currentUserId
 
-        // Security check: ensure the ownerId is the current user
+        // FETCH USER DATA (To get the current counter)
+        // We need the freshest data from the server to avoid duplicates
+        val userDocRef = firestore.collection("users").document(userId)
+        val userSnapshot = userDocRef.get().await()
+        // Convert the document to our User object
+        val currentUser = userSnapshot.toObject(User::class.java) ?: User()
+
+        // CALCULATE THE NEW HUMAN ID
+        val nextNumber = currentUser.lastBoxNumber + 1
+        val generatedHumanId = "$nextNumber"
+
+        // Generate the document ID locally
+        val newDocRef = firestore.collection("boxes").document()
+        val generatedId = newDocRef.id
+
+        // Call the server Node.js
+        val qrUrl = try {
+            qrApiService.generateQr(QrRequest(boxId = generatedId)).qrCodeUrl
+        } catch (e: Exception) {
+            throw Exception("Error generating QR code.")
+        }
+
         val boxWithInfo = box.copy(
+            boxId = generatedId,
             ownerId = userId,
-            titleSearch = box.title.lowercase() // Auto-fill search field
+            titleSearch = box.title.lowercase(), // Auto-fill search field
+            qrCodeUrl = qrUrl,
+            humanId = generatedHumanId
             // createdAt and lastAccess are handled automatically by @ServerTimestamp
         )
 
-        firestore.collection("boxes").add(boxWithInfo).await()
+        // Save in Firestore
+        // We must save the Box AND update the User's counter at the same time.
+        // If one fails, both fail. This prevents data inconsistency.
+        val batch = firestore.batch()
+        // Save the new Box
+        batch.set(newDocRef, boxWithInfo)
+        // Update the User's lastBoxNumber
+        batch.update(userDocRef, "lastBoxNumber", nextNumber)
+        // Commit both operations
+        batch.commit().await()
     }
 }

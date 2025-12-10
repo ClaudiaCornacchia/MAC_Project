@@ -15,6 +15,7 @@ data class Box(
     val ownerId: String = "",
 
     // Content
+    val humanId: String = "",
     val title: String = "",
     // Important: populate this field with title.lowercase() before saving!
     // This allows for easier, case-insensitive searching later.
