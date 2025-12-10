@@ -6,7 +6,7 @@ import androidx.credentials.Credential
 import androidx.credentials.CustomCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
-import com.example.mobile_app.ACCOUNT_CENTER_SCREEN
+import com.example.mobile_app.BOXES_SCREEN
 import com.example.mobile_app.SIGN_UP_SCREEN
 import com.example.mobile_app.screens.authentication.isValidEmail
 import com.example.mobile_app.screens.authentication.isValidPassword
@@ -62,7 +62,7 @@ class SignUpViewModel @Inject constructor(
             }
 
             accountService.createAccount(_email.value, _password.value)
-            openAndPopUp(ACCOUNT_CENTER_SCREEN, SIGN_UP_SCREEN)
+            openAndPopUp(BOXES_SCREEN, SIGN_UP_SCREEN)
         }
     }
 
@@ -72,7 +72,7 @@ class SignUpViewModel @Inject constructor(
                 val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
                 // Use signInWithGoogle, if the account doesn't exists Firebase creates it
                 accountService.signInWithGoogle(googleIdTokenCredential.idToken)
-                openAndPopUp(ACCOUNT_CENTER_SCREEN, SIGN_UP_SCREEN)
+                openAndPopUp(BOXES_SCREEN, SIGN_UP_SCREEN)
             } else {
                 Log.e(ERROR_TAG, UNEXPECTED_CREDENTIAL)
             }

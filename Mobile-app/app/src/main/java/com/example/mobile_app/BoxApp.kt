@@ -34,7 +34,19 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
-
+import com.example.mobile_app.screens.box.boxes.BoxesScreen
+import com.example.mobile_app.screens.box.box_detail.BoxDetailScreen
+import com.example.mobile_app.screens.box.edit_box.EditBoxScreen
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material3.Icon
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.IconButton
+import androidx.compose.runtime.getValue
+import androidx.navigation.compose.currentBackStackEntryAsState
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class) // Opt-in required because some Material3 APIs (like Scaffold) might still be experimental
@@ -46,8 +58,32 @@ fun BoxApp() {
 
             val snackbarHostState = remember { SnackbarHostState() }
             val appState = rememberAppState(snackbarHostState)
+
+            // Monitoring the current route to show/hide the top app bar
+            val navBackStackEntry by appState.navController.currentBackStackEntryAsState()
+            val currentRoute = navBackStackEntry?.destination?.route ?: ""
+            // Where we do not want the bar
+            val noBarScreens = listOf(SPLASH_SCREEN, SIGN_IN_SCREEN, SIGN_UP_SCREEN)
+            val showTopBar = currentRoute !in noBarScreens
+            //Title dynamically
+            val topBarTitle = when {
+                currentRoute == BOXES_SCREEN -> "My Boxes"
+                currentRoute == EDIT_BOX_SCREEN -> "New Box"
+                currentRoute == ACCOUNT_CENTER_SCREEN -> "My Profile"
+                currentRoute.startsWith("BoxDetailScreen") -> "Box Details"
+                else -> "Box App"
+            }
+
             // Changed the snackBarHostState popup style with custom layout
             Scaffold(
+                topBar = {
+                    if (showTopBar) {
+                        BoxTopAppBar(
+                            title = topBarTitle,
+                            onProfileClick = { appState.navigate(ACCOUNT_CENTER_SCREEN) }
+                        )
+                    }
+                },
                 snackbarHost = {
                     SnackbarHost(hostState = snackbarHostState)
                     { data ->
@@ -105,7 +141,29 @@ fun rememberAppState(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BoxTopAppBar(
+    title: String,
+    onProfileClick: () -> Unit
+) {
+    TopAppBar(
+        title = { Text(title) },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+        ),
+        actions = {
+            IconButton(onClick = onProfileClick) {
+                Icon(Icons.Filled.AccountCircle, contentDescription = "Profile")
+            }
+        }
+    )
+}
+
 fun NavGraphBuilder.boxGraph(appState: BoxAppState) {
+
+    // 1. Authentication
     // Sign In Screen (login page)
     composable(SIGN_IN_SCREEN) {
         //
@@ -133,5 +191,30 @@ fun NavGraphBuilder.boxGraph(appState: BoxAppState) {
     // Account Center (logout and account management)
     composable(ACCOUNT_CENTER_SCREEN) {
         AccountCenterScreen(restartApp = { route -> appState.clearAndNavigate(route) })
+    }
+
+    // 2. Box
+    // All Boxes Screen
+    composable(BOXES_SCREEN) {
+        BoxesScreen(
+            openScreen = { route -> appState.navigate(route) }
+        )
+    }
+
+    // Add New Box Screen
+    composable(EDIT_BOX_SCREEN) {
+        EditBoxScreen(
+            popUpScreen = { appState.popUp() }
+        )
+    }
+
+    // Detail Screen (with arguments)
+    composable(
+        route = BOX_DETAIL_SCREEN, // "BoxDetailScreen/{boxId}"
+        arguments = listOf(navArgument("boxId") { type = NavType.StringType })
+    ) {
+        BoxDetailScreen(
+            popUpScreen = { appState.popUp() }
+        )
     }
 }

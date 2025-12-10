@@ -6,7 +6,7 @@ import androidx.credentials.Credential
 import androidx.credentials.CustomCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
-import com.example.mobile_app.ACCOUNT_CENTER_SCREEN
+import com.example.mobile_app.BOXES_SCREEN
 import com.example.mobile_app.SIGN_IN_SCREEN
 import com.example.mobile_app.model.service.AccountService
 import com.example.mobile_app.screens.BoxAppViewModel
@@ -41,7 +41,7 @@ class SignInViewModel @Inject constructor(
     fun onSignInClick(openAndPopUp: (String, String) -> Unit) {
         launchCatching {
             accountService.signInWithEmail(_email.value, _password.value)
-            openAndPopUp(ACCOUNT_CENTER_SCREEN, SIGN_IN_SCREEN)
+            openAndPopUp(BOXES_SCREEN, SIGN_IN_SCREEN)
         }
     }
 
@@ -50,7 +50,7 @@ class SignInViewModel @Inject constructor(
             if (credential is CustomCredential && credential.type == TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
                 val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
                 accountService.signInWithGoogle(googleIdTokenCredential.idToken)
-                openAndPopUp(ACCOUNT_CENTER_SCREEN, SIGN_IN_SCREEN)
+                openAndPopUp(BOXES_SCREEN, SIGN_IN_SCREEN)
             } else {
                 Log.e(ERROR_TAG, UNEXPECTED_CREDENTIAL)
             }
