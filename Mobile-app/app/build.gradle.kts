@@ -102,6 +102,19 @@ dependencies {
     //showQR
     implementation("io.coil-kt:coil-compose:2.6.0")
 
+    // CameraX core library using the camera2 implementation
+    val cameraxVersion = "1.3.1" // Check for latest
+    implementation("androidx.camera:camera-core:${cameraxVersion}")
+    implementation("androidx.camera:camera-camera2:${cameraxVersion}")
+    implementation("androidx.camera:camera-lifecycle:${cameraxVersion}")
+    implementation("androidx.camera:camera-view:${cameraxVersion}")
+
+    // ML Kit Barcode Scanning
+    implementation("com.google.mlkit:barcode-scanning:17.3.0")
+
+    // Icons (Extended) for the QR Icon
+    implementation("androidx.compose.material:material-icons-extended:1.6.0")
+
     // Add the dependencies for any other desired Firebase products
     // https://firebase.google.com/docs/android/setup#available-libraries
 

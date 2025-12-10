@@ -4,6 +4,7 @@ import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.firestore.ServerTimestamp
 import java.util.Date
+import com.google.firebase.firestore.PropertyName
 
 data class Box(
     // Document ID (Firestore automatically populates this when reading,
@@ -28,7 +29,10 @@ data class Box(
     val qrCodeUrl: String = "",
 
     // Status and Attributes
-    val isFragile: Boolean = false,
+    @get:PropertyName("fragile")
+    @set:PropertyName("fragile")
+    var isFragile: Boolean = false,
+
     val fillStatus: String = "GREEN", // Values: "GREEN" (empty), "YELLOW" (half), "RED" (full)
     val secretNote: String = "",
 

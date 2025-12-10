@@ -11,12 +11,14 @@ import androidx.lifecycle.SavedStateHandle
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import com.example.mobile_app.model.Box
+import com.example.mobile_app.model.service.AccountService
 import com.example.mobile_app.model.service.StorageService
 import com.example.mobile_app.screens.BoxAppViewModel
 
 @HiltViewModel
 class BoxDetailViewModel @Inject constructor(
     private val storageService: StorageService,
+    private val accountService: AccountService,
     savedStateHandle: SavedStateHandle // Here we get navigation arguments
 ) : BoxAppViewModel() {
 
@@ -26,12 +28,20 @@ class BoxDetailViewModel @Inject constructor(
     var box by mutableStateOf(Box())
         private set
 
+    var isUserAuthorized by mutableStateOf(true)
+        private set
+
     init {
-        launchCatching {
-            // Load box data immediately
-            val loadedBox = storageService.getBox(boxId)
-            if (loadedBox != null) {
-                box = loadedBox
+        if (!accountService.hasUser()) {
+            isUserAuthorized = false
+        }
+        else {
+            launchCatching {
+                // Load box data immediately
+                val loadedBox = storageService.getBox(boxId)
+                if (loadedBox != null) {
+                    box = loadedBox
+                }
             }
         }
     }

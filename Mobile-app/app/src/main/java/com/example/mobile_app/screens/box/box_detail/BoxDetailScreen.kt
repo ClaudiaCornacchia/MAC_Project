@@ -30,13 +30,24 @@ import coil.compose.AsyncImage
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.filled.KeyboardArrowDown // Icon for download
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.runtime.LaunchedEffect
+import com.example.mobile_app.SIGN_IN_SCREEN
+
 @Composable
 fun BoxDetailScreen(
+    openScreen: (String) -> Unit,
     popUpScreen: () -> Unit,
     viewModel: BoxDetailViewModel = hiltViewModel()
 ) {
     val box = viewModel.box
     val context = LocalContext.current
+
+    if (!viewModel.isUserAuthorized) {
+        LaunchedEffect(Unit) {
+            openScreen(SIGN_IN_SCREEN)
+        }
+        return
+    }
 
 
     Column(
@@ -76,13 +87,27 @@ fun BoxDetailScreen(
                         Spacer(Modifier.width(8.dp))
                     }
 
-                    val statusLabel = when(box.fillStatus) {
-                        "GREEN" -> "Empty"
-                        "YELLOW" -> "Half Full"
-                        "RED" -> "Full"
-                        else -> "Unknown"
+                    val (statusColor, statusText) = when(box.fillStatus) {
+                        "GREEN" -> Pair(Color.Green, "Empty")
+                        "YELLOW" -> Pair(Color.Yellow, "Half Empty") // As requested
+                        "RED" -> Pair(Color.Red, "Full")
+                        else -> Pair(Color.Gray, "Unknown")
                     }
-                    SuggestionChip(onClick = {}, label = { Text("Status: $statusLabel") })
+
+                    SuggestionChip(
+                        onClick = {},
+                        // The Icon parameter allows us to put the Dot to the left of the text
+                        icon = {
+                            // Draw a simple circle
+                            androidx.compose.foundation.Canvas(
+                                modifier = Modifier.size(10.dp), // Size of the dot
+                                onDraw = {
+                                    drawCircle(color = statusColor)
+                                }
+                            )
+                        },
+                        label = { Text(statusText) }
+                    )
                 }
 
                 if (box.secretNote.isNotBlank()) {
