@@ -25,4 +25,9 @@
     <string name="update">Update</string>
     <string name="or">or</string>
     <string name="invalid_qr_code">Invalid QR Code. Try another one.</string>
+    <string name="generic_error">Something went wrong. Try again.</string>
+    <string name="permission_needed">Permission needed to record audio.</string>
+
+
+
 </resources>
