@@ -8,17 +8,21 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.SavedStateHandle
+import com.example.mobile_app.SnackbarManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import com.example.mobile_app.model.Box
 import com.example.mobile_app.model.service.AccountService
+import com.example.mobile_app.model.service.LocationService
 import com.example.mobile_app.model.service.StorageService
 import com.example.mobile_app.screens.BoxAppViewModel
+import com.google.firebase.firestore.GeoPoint
 
 @HiltViewModel
 class BoxDetailViewModel @Inject constructor(
     private val storageService: StorageService,
     private val accountService: AccountService,
+    private val locationService: LocationService,
     savedStateHandle: SavedStateHandle // Here we get navigation arguments
 ) : BoxAppViewModel() {
 
@@ -46,6 +50,7 @@ class BoxDetailViewModel @Inject constructor(
         }
     }
 
+    // QR CODE
     // Function to download the QR Code using the Android DownloadManager.
     // We pass the Context here because DownloadManager is a system service.
     fun downloadQrCode(context: Context) {
@@ -70,5 +75,46 @@ class BoxDetailViewModel @Inject constructor(
             throw Exception("Error downloading QR code.")
         }
     }
+
+    // MAPS, Update location
+    fun updateLocation() {
+        launchCatching {
+            // 1. Get the current GPS Location (High Accuracy)
+            val location = locationService.getCurrentLocation()
+
+            if (location != null) {
+                // Convert Android Location to Firestore GeoPoint
+                val newGeoPoint = GeoPoint(location.latitude, location.longitude)
+
+                // Get the human-readable address (Reverse Geocoding)
+                val newAddress = locationService.getAddressFromGeoPoint(newGeoPoint)
+
+                // 2. Create a copy of the current box with new location data
+                val updatedBox = box.copy(
+                    location = newGeoPoint,
+                    locationAddress = newAddress
+                )
+
+                // 3. Update the UI State IMMEDIATELY
+                // Because 'box' is a mutableState, assigning a new value here
+                // triggers a Recomposition in BoxDetailScreen (Map moves, text updates).
+                box = updatedBox
+
+                // 4. Save to Firestore Database
+                storageService.updateBoxFields(
+                    boxId = box.boxId,
+                    updates = mapOf(
+                        "location" to newGeoPoint,
+                        "locationAddress" to newAddress
+                    )
+                )
+
+            } else {
+                // Handle error if GPS is off or signal is lost
+                SnackbarManager.showMessage("Could not get GPS location. Please check your settings.")
+            }
+        }
+    }
+
 
 }

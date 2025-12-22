@@ -1,4 +1,4 @@
-package com.example.mobile_app.screens.box.edit_box
+package com.example.mobile_app.screens.box.new_box
 
 import android.app.Application
 import androidx.compose.runtime.getValue
@@ -10,40 +10,44 @@ import com.example.mobile_app.SnackbarManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import com.example.mobile_app.model.Box
+import com.example.mobile_app.model.service.LocationService
 import com.example.mobile_app.model.service.SpeechService
 import com.example.mobile_app.model.service.SpeechState
 import com.example.mobile_app.model.service.StorageService
 import com.example.mobile_app.screens.BoxAppViewModel
-
-
+import com.google.firebase.firestore.GeoPoint
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import com.example.mobile_app.model.service.AutocompleteResult
 
 @HiltViewModel
-class EditBoxViewModel @Inject constructor(
+class NewBoxViewModel @Inject constructor(
     private val storageService: StorageService,
     private val speechService: SpeechService,
+    private val locationService: LocationService,
     private val application: Application // Context needed for permission check
 ) : BoxAppViewModel() {
 
-    var uiState by mutableStateOf(EditBoxUiState())
+    var uiState by mutableStateOf(NewBoxUiState())
         private set
 
-    // --- SPEECH TO TEXT STATE ---
-
-    // Controls the visibility of the bottom sheet (Popup)
-    // True = Listening loop is active. False = Stopped.
-    // State for Speech UI
-    // If true, show the BottomSheet (Popup)
+    // 1. SPEECH TO TEXT STATE
     var isListeningModeActive by mutableStateOf(false)
         private set
-
     // Volume level for the Visualizer
     var currentLoudness by mutableFloatStateOf(0f)
         private set
-
-    // TEMPORARY TEXT: This is what you see ONLY in the popup while speaking.
-    // It does NOT touch uiState.description until you save.
+    // temporary text: This is what you see ONLY in the popup while speaking.
     var popupDisplayText by mutableStateOf("")
         private set
+
+    // 2. LOCATION STATE
+    // List of suggestions from Google
+    var locationPredictions by mutableStateOf<List<AutocompleteResult>>(emptyList())
+        private set
+
+    // Job to handle search debounce (delay)
+    private var searchJob: Job? = null
 
     fun onTitleChange(newValue: String) { uiState = uiState.copy(title = newValue) }
     fun onDescriptionChange(newValue: String) { uiState = uiState.copy(description = newValue) }
@@ -51,7 +55,7 @@ class EditBoxViewModel @Inject constructor(
     fun onFragileChange(newValue: Boolean) { uiState = uiState.copy(isFragile = newValue) }
     fun onFillStatusChange(newValue: String) { uiState = uiState.copy(fillStatus = newValue) }
 
-    // --- SPEECH FUNCTIONS ---
+    // 1. SPEECH FUNCTIONS
 
     fun startListening() {
         isListeningModeActive = true
@@ -129,7 +133,91 @@ class EditBoxViewModel @Inject constructor(
         // We do NOT update uiState.description here.
     }
 
-    // Save box logic
+    // 2. LOCATION FUNCTIONS
+    /**
+     * Captures the current GPS location and converts it to an address.
+     * Updates the UI State with the result.
+     */
+    fun captureCurrentLocation() {
+        launchCatching {
+            // getCurrentLocation is suspend (OK). It waits for a fresh GPS update.
+            val location = locationService.getCurrentLocation()
+
+            if (location != null) {
+                val geoPoint = GeoPoint(location.latitude, location.longitude)
+
+                // getAddressFromGeoPoint is NOW suspend (OK, because we are in launchCatching)
+                // It performs Reverse Geocoding (Lat/Lng -> String address)
+                val address = locationService.getAddressFromGeoPoint(geoPoint)
+
+                // Update the UI state with the captured location data
+                uiState = uiState.copy(location = geoPoint, locationAddress = address)
+
+            } else {
+                SnackbarManager.showMessage("Could not get location. Check GPS.")
+            }
+        }
+    }
+
+
+    // Called when user types in the Location Address field.
+    fun onLocationQueryChange(newQuery: String) {
+        // 1. Update text immediately so user sees what they type
+
+        // If user types nothing, reset everything
+        if (newQuery.isBlank()) {
+            uiState = uiState.copy(
+                locationAddress = "",
+                location = null // Reset coordinate
+            )
+            locationPredictions = emptyList()
+            searchJob?.cancel()
+            return
+        }
+
+        // If user is writing, show suggestions and disable save button
+        uiState = uiState.copy(
+            locationAddress = newQuery,
+            location = null // <--- RESET COORDINATE
+        )
+
+        // 2. Cancel previous search if user keeps typing
+        searchJob?.cancel()
+
+        // 3. Start new search if query is long enough
+        if (newQuery.length > 2) {
+            searchJob = launchCatching {
+                delay(500) // Wait 500ms (Debounce) to save API calls
+                val results = locationService.getAutocompletePredictions(newQuery)
+                locationPredictions = results
+            }
+        } else {
+            locationPredictions = emptyList()
+        }
+    }
+
+
+     // Called when user selects a specific address from the list.
+    fun onLocationPredictionSelected(prediction: AutocompleteResult) {
+        launchCatching {
+            // 1. Update text to the full selected address
+            val fullAddress = "${prediction.primaryText}, ${prediction.secondaryText}"
+            uiState = uiState.copy(locationAddress = fullAddress)
+            locationPredictions = emptyList() // Hide list
+
+            // 2. Fetch Coordinates (Lat/Lng) from Google
+            val location = locationService.getPlaceDetails(prediction.placeId)
+
+            if (location != null) {
+                val geoPoint = GeoPoint(location.latitude, location.longitude)
+                uiState = uiState.copy(location = geoPoint)
+            } else {
+                SnackbarManager.showMessage("Could not fetch coordinates for this place.")
+            }
+        }
+    }
+
+    // 3. SAVE BOX
     fun onDoneClick(popUpScreen: () -> Unit) {
         launchCatching {
             val newBox = Box(
@@ -137,7 +225,10 @@ class EditBoxViewModel @Inject constructor(
                 description = uiState.description,
                 isFragile = uiState.isFragile,
                 fillStatus = uiState.fillStatus,
-                secretNote = uiState.secretNote
+                secretNote = uiState.secretNote,
+                location = uiState.location,
+                locationAddress = uiState.locationAddress
+
             )
             storageService.saveBox(newBox)
             popUpScreen() // Go back to list
@@ -147,10 +238,12 @@ class EditBoxViewModel @Inject constructor(
 }
 
 // Helper data class for the UI State
-data class EditBoxUiState(
+data class NewBoxUiState(
     val title: String = "",
     val description: String = "",
     val isFragile: Boolean = false,
     val fillStatus: String = "GREEN", // Default Empty
-    val secretNote: String = ""
+    val secretNote: String = "",
+    val location: GeoPoint? = null,
+    val locationAddress: String = ""
 )

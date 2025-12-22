@@ -8,6 +8,6 @@ const val ACCOUNT_CENTER_SCREEN = "AccountCenterScreen"
 
 // 2. Box
 const val BOXES_SCREEN = "BoxesScreen"
-const val EDIT_BOX_SCREEN = "EditBoxScreen"
+const val NEW_BOX_SCREEN = "NewBoxScreen"
 const val BOX_DETAIL_SCREEN = "BoxDetailScreen/{boxId}"
 const val SCAN_QR_SCREEN = "ScanQrScreen"

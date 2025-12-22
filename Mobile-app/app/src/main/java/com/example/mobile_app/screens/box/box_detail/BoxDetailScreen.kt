@@ -12,13 +12,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Card
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SuggestionChip
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,6 +25,18 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown // Icon for down
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.LaunchedEffect
 import com.example.mobile_app.SIGN_IN_SCREEN
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.rememberCameraPositionState
+import com.google.maps.android.compose.rememberMarkerState
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.*
+import androidx.compose.material.icons.filled.Refresh
+import android.Manifest
+
 
 @Composable
 fun BoxDetailScreen(
@@ -47,6 +52,13 @@ fun BoxDetailScreen(
             openScreen(SIGN_IN_SCREEN)
         }
         return
+    }
+
+    // Launcher to request permission if not granted
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) viewModel.updateLocation()
     }
 
 
@@ -68,11 +80,13 @@ fun BoxDetailScreen(
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
+                // 1. TITLE
                 Text("Title:", style = MaterialTheme.typography.labelMedium)
                 Text(box.title, style = MaterialTheme.typography.headlineMedium)
 
                 Spacer(Modifier.height(8.dp))
 
+                // 2. DESCRIPTION
                 Text("Description:", style = MaterialTheme.typography.labelMedium)
                 Text(box.description, style = MaterialTheme.typography.bodyLarge)
 
@@ -80,7 +94,7 @@ fun BoxDetailScreen(
                 HorizontalDivider()
                 Spacer(Modifier.height(16.dp))
 
-                // Status Info
+                // 3. STATUS INFO
                 Row {
                     if (box.isFragile) {
                         SuggestionChip(onClick = {}, label = { Text("Fragile ⚠️") })
@@ -110,16 +124,14 @@ fun BoxDetailScreen(
                     )
                 }
 
+                // 4. SECRET NOTE
                 if (box.secretNote.isNotBlank()) {
                     Spacer(Modifier.height(16.dp))
                     Text("Secret Note:", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
                     Text(box.secretNote, style = MaterialTheme.typography.bodyMedium)
                 }
 
-
-
-
-                // Display humanId
+                // 5. humanId (Number of the box)
                 if(box.humanId.isNotBlank()) {
                     Spacer(Modifier.height(16.dp))
                     Text("Number:", style = MaterialTheme.typography.labelMedium)
@@ -130,7 +142,57 @@ fun BoxDetailScreen(
                 HorizontalDivider()
                 Spacer(Modifier.height(24.dp))
 
-                // --- QR CODE SECTION ---
+                // 6. MAP SECTION
+                Text("Location", style = MaterialTheme.typography.titleMedium)
+
+                if (box.location != null) {
+                    val boxPosition = LatLng(box.location.latitude, box.location.longitude)
+
+                    // Camera State (Zoom level)
+                    val cameraPositionState = rememberCameraPositionState {
+                        position = CameraPosition.fromLatLngZoom(boxPosition, 15f)
+                    }
+
+                    val markerState = rememberMarkerState(position = boxPosition)
+
+                    // Address Text
+                    if (box.locationAddress.isNotBlank()) {
+                        Text(box.locationAddress, style = MaterialTheme.typography.bodySmall)
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    // Map Component
+                    GoogleMap(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(250.dp),
+                        cameraPositionState = cameraPositionState
+                    ) {
+                        // FIX: Ensure 'Marker' is imported from com.google.maps.android.compose
+                        Marker(
+                            state = markerState,
+                            title = box.title,
+                            snippet = box.locationAddress
+                        )
+                    }
+                } else {
+                    Text("No location data available.", style = MaterialTheme.typography.bodyMedium)
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                // Update Location button
+                Button(
+                    onClick = { permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Filled.Refresh, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Update GPS Position Here")
+                }
+
+                // 7. QR CODE
                 if (box.qrCodeUrl.isNotBlank()) {
                     Column(
                         modifier = Modifier.fillMaxWidth(),

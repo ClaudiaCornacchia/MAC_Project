@@ -56,18 +56,18 @@ class StorageService @Inject constructor(
         val newDocRef = firestore.collection("boxes").document()
         val generatedId = newDocRef.id
 
-        // Call the server Node.js
-        val qrUrl = try {
-            qrApiService.generateQr(QrRequest(boxId = generatedId)).qrCodeUrl
-        } catch (e: Exception) {
-            throw Exception("Error generating QR code.")
-        }
+        // CALL THE SERVER NODE.JS
+//        val qrUrl = try {
+//            qrApiService.generateQr(QrRequest(boxId = generatedId)).qrCodeUrl
+//        } catch (e: Exception) {
+//            throw Exception("Error generating QR code.")
+//        }
 
         val boxWithInfo = box.copy(
             boxId = generatedId,
             ownerId = userId,
             titleSearch = box.title.lowercase(), // Auto-fill search field
-            qrCodeUrl = qrUrl,
+            //qrCodeUrl = qrUrl,
             humanId = generatedHumanId
             // createdAt and lastAccess are handled automatically by @ServerTimestamp
         )
@@ -82,5 +82,12 @@ class StorageService @Inject constructor(
         batch.update(userDocRef, "lastBoxNumber", nextNumber)
         // Commit both operations
         batch.commit().await()
+    }
+
+    // 4. UPDATE: Update an existing box
+    suspend fun updateBoxFields(boxId: String, updates: Map<String, Any>) {
+        // "update" only changes the fields provided in the map.
+        // It fails if the document does not exist.
+        firestore.collection("boxes").document(boxId).update(updates).await()
     }
 }

@@ -36,7 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import com.example.mobile_app.screens.box.boxes.BoxesScreen
 import com.example.mobile_app.screens.box.box_detail.BoxDetailScreen
-import com.example.mobile_app.screens.box.edit_box.EditBoxScreen
+import com.example.mobile_app.screens.box.new_box.NewBoxScreen
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import androidx.compose.material.icons.Icons
@@ -131,7 +131,7 @@ fun BoxApp() {
             //Title dynamically
             val topBarTitle = when {
                 currentRoute == BOXES_SCREEN -> "My Boxes"
-                currentRoute == EDIT_BOX_SCREEN -> "New Box"
+                currentRoute == NEW_BOX_SCREEN -> "New Box"
                 currentRoute == ACCOUNT_CENTER_SCREEN -> "My Profile"
                 currentRoute.startsWith("BoxDetailScreen") -> "Box Details"
                 else -> "Box App"
@@ -282,8 +282,8 @@ fun NavGraphBuilder.boxGraph(appState: BoxAppState) {
     }
 
     // Add New Box Screen
-    composable(EDIT_BOX_SCREEN) {
-        EditBoxScreen(
+    composable(NEW_BOX_SCREEN) {
+        NewBoxScreen(
             popUpScreen = { appState.popUp() }
         )
     }

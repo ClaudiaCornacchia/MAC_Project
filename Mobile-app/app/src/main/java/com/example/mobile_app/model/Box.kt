@@ -37,7 +37,7 @@ data class Box(
     val secretNote: String = "",
 
     // Location (can be null if the box hasn't been geotagged)
-    val location: GeoPoint? = null,
+    val location: GeoPoint? = null,  //firestore type for geo-coordinates
     val locationAddress: String = "", // Human-readable address cache
 
     // Dates

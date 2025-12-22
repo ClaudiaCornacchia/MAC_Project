@@ -1,4 +1,4 @@
-package com.example.mobile_app.screens.box.edit_box
+package com.example.mobile_app.screens.box.new_box
 
 
 // Android System & Permissions
@@ -20,7 +20,9 @@ import androidx.compose.foundation.verticalScroll
 
 // Compose Material Icons
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.LocationOn
 
 // Compose Material 3 Components
 import androidx.compose.material3.Button
@@ -36,6 +38,10 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.MenuAnchorType
 
 // Compose Runtime
 import androidx.compose.runtime.Composable
@@ -47,6 +53,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
 
 // Hilt Dependency Injection
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -58,14 +65,18 @@ import com.example.mobile_app.SnackbarManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditBoxScreen(
+fun NewBoxScreen(
     popUpScreen: () -> Unit,
-    viewModel: EditBoxViewModel = hiltViewModel()
+    viewModel: NewBoxViewModel = hiltViewModel()
 ) {
     val uiState = viewModel.uiState
     val context = LocalContext.current
 
-    // Permission Launcher
+    // State to control if the dropdown Google Places is expanded (visible)
+    // It should be expanded if we have predictions and the user is typing
+    val isDropdownExpanded = viewModel.locationPredictions.isNotEmpty()
+
+    // 1. Audio Permission Launcher
     val recordAudioLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { isGranted ->
@@ -75,6 +86,19 @@ fun EditBoxScreen(
                 // Show snackbar: Permission needed
                 SnackbarManager.showMessage(context.getString(R.string.permission_needed))
 
+            }
+        }
+    )
+
+    // 2. Location Permission Launcher
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            if (isGranted) {
+                // If granted, call the ViewModel to capture the GPS coordinates
+                viewModel.captureCurrentLocation()
+            } else {
+                SnackbarManager.showMessage(context.getString(R.string.permission_needed))
             }
         }
     )
@@ -89,7 +113,7 @@ fun EditBoxScreen(
         Text("Create New Box", style = MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.height(16.dp))
 
-        // Title
+        // 1. Title
         OutlinedTextField(
             value = uiState.title,
             onValueChange = { viewModel.onTitleChange(it) },
@@ -97,7 +121,7 @@ fun EditBoxScreen(
             modifier = Modifier.fillMaxWidth()
         )
 
-        // Description
+        // 2. Description
         OutlinedTextField(
             value = uiState.description,
             onValueChange = { viewModel.onDescriptionChange(it) },
@@ -118,7 +142,7 @@ fun EditBoxScreen(
             }
         )
 
-        // Secret Note (Optional)
+        // 3. Secret Note (Optional)
         OutlinedTextField(
             value = uiState.secretNote,
             onValueChange = { viewModel.onSecretNoteChange(it) },
@@ -128,7 +152,77 @@ fun EditBoxScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        // Fragile Switch
+        // 4. Location
+        ExposedDropdownMenuBox(
+            expanded = isDropdownExpanded,
+            onExpandedChange = { /* handled by input logic */ }
+        ) {
+            // The Input Field
+            OutlinedTextField(
+                value = uiState.locationAddress,
+                onValueChange = { viewModel.onLocationQueryChange(it) },
+                label = { Text("Location Address") },
+                placeholder = { Text("Start typing street name...") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(
+                        type = MenuAnchorType.PrimaryEditable,
+                        enabled = true
+                    ),
+                trailingIcon = {
+                    Row {
+                        // Clear button
+                        if (uiState.locationAddress.isNotBlank()) {
+                            IconButton(onClick = {
+                                // Resetta testo e coordinate
+                                viewModel.onLocationQueryChange("")
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.Clear, // Serve import androidx.compose.material.icons.filled.Clear
+                                    contentDescription = "Clear",
+                                    tint = Color.Gray
+                                )
+                            }
+                        }
+                        // GPS button!
+                        IconButton(onClick = {
+                            locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                        }) {
+                            Icon(
+                                imageVector = Icons.Filled.LocationOn,
+                                contentDescription = "Use GPS",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                },
+                singleLine = true
+            )
+
+            // The Suggestions List
+            ExposedDropdownMenu(
+                expanded = isDropdownExpanded,
+                onDismissRequest = { /* Optional: clear list on dismiss */ }
+            ) {
+                viewModel.locationPredictions.forEach { prediction ->
+                    DropdownMenuItem(
+                        text = {
+                            Column {
+                                Text(prediction.primaryText, style = MaterialTheme.typography.bodyLarge)
+                                Text(prediction.secondaryText, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                            }
+                        },
+                        onClick = {
+                            viewModel.onLocationPredictionSelected(prediction)
+                        }
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        // 5. Fragile Switch
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Is Fragile?")
             Spacer(Modifier.weight(1f))
@@ -140,7 +234,7 @@ fun EditBoxScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        // Fill Status Selection
+        // 6. Fill Status Selection
         Text("Fill Status", style = MaterialTheme.typography.labelLarge)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             FilterChip(
@@ -165,7 +259,9 @@ fun EditBoxScreen(
         Button(
             onClick = { viewModel.onDoneClick(popUpScreen) },
             modifier = Modifier.fillMaxWidth(),
-            enabled = uiState.title.isNotBlank() && uiState.description.isNotBlank()
+            enabled = uiState.title.isNotBlank() &&
+                    uiState.description.isNotBlank() &&
+                    (uiState.locationAddress.isBlank() || uiState.location != null)
         ) {
             Text("Save Box")
         }

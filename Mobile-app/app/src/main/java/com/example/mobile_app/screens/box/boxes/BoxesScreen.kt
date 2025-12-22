@@ -25,7 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.mobile_app.EDIT_BOX_SCREEN
+import com.example.mobile_app.NEW_BOX_SCREEN
 import com.example.mobile_app.model.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -73,7 +73,7 @@ fun BoxesScreen(
 
                 // 2. ADD BUTTON (Primary)
                 FloatingActionButton(
-                    onClick = { openScreen(EDIT_BOX_SCREEN) },
+                    onClick = { openScreen(NEW_BOX_SCREEN) },
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary
                 ) {

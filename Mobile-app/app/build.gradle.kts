@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -9,6 +12,16 @@ plugins {
     id("kotlin-kapt")
     id("com.google.dagger.hilt.android")
 }
+
+// Load the local.properties file (if it exists)
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(FileInputStream(localPropertiesFile))
+}
+
+// Get the value of the MAPS_API_KEY property from local.properties
+val mapsApiKey = localProperties.getProperty("MAPS_API_KEY") ?: ""
 
 android {
     namespace = "com.example.mobile_app"
@@ -25,6 +38,10 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
+
+        // Set the API key for Google Maps in the manifest
+        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
+
     }
 
     buildTypes {
@@ -116,8 +133,13 @@ dependencies {
     // Icons (Extended) for the QR Icon
     implementation("androidx.compose.material:material-icons-extended:1.6.0")
 
-    // Add the dependencies for any other desired Firebase products
-    // https://firebase.google.com/docs/android/setup#available-libraries
+
+    // Google Maps for Compose
+    implementation("com.google.maps.android:maps-compose:4.3.0")
+    // Google Play Services Location (so that we can use fusion location GPS)
+    implementation("com.google.android.gms:play-services-location:21.0.1")
+    // Google Places SDK
+    implementation("com.google.android.libraries.places:places:3.3.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

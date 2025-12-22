@@ -1,4 +1,4 @@
-package com.example.mobile_app.screens.box.edit_box
+package com.example.mobile_app.screens.box.new_box
 
 //graphic component for audio spike
 
