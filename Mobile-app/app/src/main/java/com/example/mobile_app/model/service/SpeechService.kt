@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import java.util.Locale
 import javax.inject.Inject
+import android.util.Log
 
 // State of the recognition process
 sealed class SpeechState {
@@ -55,11 +56,18 @@ class SpeechService @Inject constructor(
             }
 
             override fun onError(error: Int) {
+                // 1. Logghiamo l'errore nel sistema per vederlo in Logcat
+                Log.e("SpeechDebug", "`ERROR` SpeechRecognizer. CODE: $error")
+
                 val message = when (error) {
-                    SpeechRecognizer.ERROR_NO_MATCH -> "No speech match"
+                    SpeechRecognizer.ERROR_NO_MATCH -> "No Match, please speak english"
                     SpeechRecognizer.ERROR_NETWORK -> "Network error"
-                    else -> "Error occurred ($error)"
+                    SpeechRecognizer.ERROR_CLIENT -> "Client error" // Code 5
+                    SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Not enough permissions"
+                    SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "Busy with other task"
+                    else -> "Generic error (Code: $error)"
                 }
+
                 trySend(SpeechState.Error(message))
                 close() // Close the channel
             }

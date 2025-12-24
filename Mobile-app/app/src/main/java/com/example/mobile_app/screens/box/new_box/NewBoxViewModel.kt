@@ -87,7 +87,8 @@ class NewBoxViewModel @Inject constructor(
                         stopAndSaveRecording()
                     }
                     is SpeechState.Error -> {
-                        val errorMessage = application.getString(R.string.generic_error)
+                        //Use the message coming from the Service
+                        val errorMessage = state.message
 
                         SnackbarManager.showMessage(errorMessage)
                         stopRecordingAndDismiss()
