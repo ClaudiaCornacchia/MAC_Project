@@ -182,7 +182,7 @@ class NewBoxViewModel @Inject constructor(
         // If user is writing, show suggestions and disable save button
         uiState = uiState.copy(
             locationAddress = newQuery,
-            location = null // <--- RESET COORDINATE
+            location = null // RESET COORDINATE
         )
 
         // 2. Cancel previous search if user keeps typing

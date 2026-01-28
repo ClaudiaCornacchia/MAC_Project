@@ -141,6 +141,67 @@ class StorageService @Inject constructor(
         firestore.collection("boxes").document(boxId).update(updates).await()
     }
 
+    suspend fun updateBoxFast(
+        boxId: String,
+        updates: MutableMap<String, Any>,
+        newImageUri: Uri?
+    ) {
+        val userId = accountService.currentUserId
+
+        // 1. STEP VELOCE: Aggiorna subito i testi e metti lo stato "UPLOADING"
+        if (newImageUri != null) {
+            updates["imageUrl"] = "UPLOADING"
+        }
+        updates["lastEdited"] = com.google.firebase.Timestamp.now()
+
+        // Questo avviene in frazioni di secondo: l'utente vede subito le modifiche ai testi
+        firestore.collection("boxes").document(boxId).update(updates).await()
+
+        // 2. STEP LENTO (BACKGROUND): Se c'è una foto, caricala con calma
+        if (newImageUri != null) {
+            // Usa lo scope globale dell'app (come facevi in saveBox)
+            // Nota: se non hai 'applicationScope' nel service, usa 'CoroutineScope(Dispatchers.IO).launch'
+            // ma l'ideale è iniettarlo con Hilt. Usiamo la logica del tuo saveBox:
+
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                try {
+                    // A. Comprimi e Carica
+                    val compressedData = getCompressedImage(newImageUri)
+
+                    if (compressedData != null) {
+                        val storageRef = storage.reference.child("box_images/$userId/$boxId.jpg")
+                        storageRef.putBytes(compressedData).await()
+
+                        val finalImageUrl = storageRef.downloadUrl.await().toString()
+
+                        // B. Aggiorna Firestore con l'URL vero
+                        firestore.collection("boxes").document(boxId).update("imageUrl", finalImageUrl).await()
+
+                        android.util.Log.d("UPDATE_BG", "Foto aggiornata in background!")
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    // Se fallisce, rimetti vuoto o gestisci l'errore
+                    // firestore.collection("boxes").document(boxId).update("imageUrl", "").await()
+                }
+            }
+        }
+    }
+
+    suspend fun uploadImageAndGetUrl(uri: Uri, boxId: String): String? {
+        val userId = accountService.currentUserId
+
+        val compressedData = getCompressedImage(uri) ?: return null
+
+        val storageRef = storage.reference.child("box_images/$userId/$boxId.jpg")
+
+        // Upload
+        storageRef.putBytes(compressedData).await()
+
+        // Return Download URL
+        return storageRef.downloadUrl.await().toString()
+    }
+
     // 5. SHARE BOX
     suspend fun shareBoxWithUser(boxId: String, email: String) {
         // 1. Search for the target user by email in the 'users' collection

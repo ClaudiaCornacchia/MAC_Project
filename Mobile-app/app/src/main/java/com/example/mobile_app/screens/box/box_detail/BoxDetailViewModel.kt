@@ -19,6 +19,9 @@ import com.example.mobile_app.screens.BoxAppViewModel
 import com.google.firebase.firestore.GeoPoint
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import com.example.mobile_app.model.service.AutocompleteResult
 
 @HiltViewModel
 class BoxDetailViewModel @Inject constructor(
@@ -42,6 +45,21 @@ class BoxDetailViewModel @Inject constructor(
 
     var sharedNames by mutableStateOf<List<String>>(emptyList())
         private set
+
+    // Update box fields
+    var isEditing by mutableStateOf(false)
+        private set
+    var draftBox by mutableStateOf(Box())
+        private set
+    var newPhotoUri by mutableStateOf<Uri?>(null)
+        private set
+    var isLoading by mutableStateOf(false)
+        private set
+    var tempPhotoUri by mutableStateOf<Uri?>(null)
+    var locationPredictions by mutableStateOf<List<AutocompleteResult>>(emptyList())
+        private set
+
+    private var searchJob: Job? = null
 
 
     fun initialize(boxId: String) {
@@ -172,7 +190,94 @@ class BoxDetailViewModel @Inject constructor(
         }
     }
 
+    // UPDATE BOX
+    fun startEditing() {
+        // When I click on the update button I'm in edit mode
+        box?.let { current ->
+            draftBox = current.copy()
+            isEditing = true
+        }
+    }
 
+    fun cancelEditing() {
+        // If I cancel discard the changes
+        isEditing = false
+    }
+
+    fun updateDraftTitle(newTitle: String) { draftBox = draftBox.copy(title = newTitle) }
+    fun updateDraftDescription(newDesc: String) { draftBox = draftBox.copy(description = newDesc) }
+    fun updateDraftFragile(isFragile: Boolean) { draftBox = draftBox.copy(isFragile = isFragile) }
+    fun updateDraftStatus(newStatus: String) { draftBox = draftBox.copy(fillStatus = newStatus) }
+    fun updateDraftNote(newLocationAddress: String) { draftBox = draftBox.copy(locationAddress = newLocationAddress) }
+    fun updateDraftPhoto(uri: Uri) { newPhotoUri = uri }
+
+    fun saveEditChanges() {
+        launchCatching {
+            isLoading = true
+
+
+            val updates = mutableMapOf<String, Any>(
+                "title" to draftBox.title,
+                "titleSearch" to draftBox.title.lowercase(),
+                "description" to draftBox.description,
+                "fillStatus" to draftBox.fillStatus,
+                "isFragile" to draftBox.isFragile,
+                "locationAddress" to draftBox.locationAddress
+            )
+
+            storageService.updateBoxFast(
+                boxId = draftBox.boxId,
+                updates = updates,
+                newImageUri = newPhotoUri
+            )
+
+            newPhotoUri = null
+            isEditing = false
+            isLoading = false
+        }
+    }
+
+    fun onLocationQueryChange(newQuery: String) {
+
+        draftBox = draftBox.copy(
+            locationAddress = newQuery,
+            location = null
+        )
+
+        searchJob?.cancel()
+
+        if (newQuery.length > 2) {
+            searchJob = launchCatching {
+                delay(500) // Debounce
+                locationPredictions = locationService.getAutocompletePredictions(newQuery)
+            }
+        } else {
+            locationPredictions = emptyList()
+        }
+    }
+
+    fun onLocationPredictionSelected(prediction: AutocompleteResult) {
+        launchCatching {
+            val fullAddress = "${prediction.primaryText}, ${prediction.secondaryText}"
+
+            draftBox = draftBox.copy(locationAddress = fullAddress)
+            locationPredictions = emptyList()
+
+            val location = locationService.getPlaceDetails(prediction.placeId)
+
+            if (location != null) {
+                val geoPoint = GeoPoint(location.latitude, location.longitude)
+                // Update also the coordinates in the draft
+                draftBox = draftBox.copy(location = geoPoint)
+            } else {
+                SnackbarManager.showMessage("Could not fetch coordinates for this place.")
+            }
+        }
+    }
+
+    fun clearLocationSuggestions() {
+        locationPredictions = emptyList()
+    }
 
 
 }

@@ -83,6 +83,7 @@ dependencies {
     implementation("com.google.dagger:hilt-android:2.51.1")
     implementation(libs.androidx.compose.runtime)
     implementation(libs.androidx.compose.foundation.layout)
+    implementation(libs.androidx.foundation.layout)
     kapt("com.google.dagger:hilt-android-compiler:2.51.1")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
