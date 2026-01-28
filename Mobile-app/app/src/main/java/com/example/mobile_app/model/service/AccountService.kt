@@ -117,6 +117,16 @@ class AccountService @Inject constructor() {
         }
     }
 
+    //Used by BoxDetailViewmodel to retrieve the name of the users that shares the box
+    suspend fun getUserName(userId: String): String {
+        return try {
+            val doc = Firebase.firestore.collection("users").document(userId).get().await()
+            doc.getString("displayName") ?: "Unknown User"
+        } catch (e: Exception) {
+            "Unknown"
+        }
+    }
+
     private fun FirebaseUser?.toBoxUser(): User {
         return if (this == null) User() else User(
             id = this.uid,
@@ -126,4 +136,6 @@ class AccountService @Inject constructor() {
             displayName = this.displayName ?: "",
         )
     }
+
+
 }

@@ -36,10 +36,19 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.*
 import androidx.compose.material.icons.filled.Refresh
 import android.Manifest
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 
 
 @Composable
 fun BoxDetailScreen(
+    boxId: String,
     openScreen: (String) -> Unit,
     popUpScreen: () -> Unit,
     viewModel: BoxDetailViewModel = hiltViewModel()
@@ -52,6 +61,11 @@ fun BoxDetailScreen(
             openScreen(SIGN_IN_SCREEN)
         }
         return
+    }
+
+    // Initialize the ViewModel
+    LaunchedEffect(boxId) {
+        viewModel.initialize(boxId)
     }
 
     // Launcher to request permission if not granted
@@ -90,9 +104,8 @@ fun BoxDetailScreen(
                 Text("Description:", style = MaterialTheme.typography.labelMedium)
                 Text(box.description, style = MaterialTheme.typography.bodyLarge)
 
-                Spacer(Modifier.height(16.dp))
-                HorizontalDivider()
-                Spacer(Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+
 
                 // 3. STATUS INFO
                 Row {
@@ -142,7 +155,52 @@ fun BoxDetailScreen(
                 HorizontalDivider()
                 Spacer(Modifier.height(24.dp))
 
-                // 6. MAP SECTION
+                // 6. Share
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Shared with:",
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    IconButton(onClick = { viewModel.onShareClick() }) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = "Add Person",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+                if (viewModel.sharedNames.isNotEmpty()) {
+                    Row(modifier = Modifier.padding(top = 4.dp)) {
+                        viewModel.sharedNames.forEach { name ->
+                            AssistChip(
+                                onClick = {},
+                                label = { Text(name) },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(16.dp))
+                                },
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                        }
+                    }
+                } else {
+                    Text(
+                        text = "Private (Only you)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray,
+                        fontStyle = FontStyle.Italic
+                    )
+                }
+
+                Spacer(Modifier.height(24.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(24.dp))
+
+                // 7. MAP SECTION
                 Text("Location", style = MaterialTheme.typography.titleMedium)
 
                 if (box.location != null) {
@@ -192,7 +250,7 @@ fun BoxDetailScreen(
                     Text("Update GPS Position Here")
                 }
 
-                // 7. QR CODE
+                // 8. QR CODE
                 if (box.qrCodeUrl.isNotBlank()) {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
@@ -235,4 +293,43 @@ fun BoxDetailScreen(
             }
         }
     }
+    if (viewModel.showShareDialog) {
+        ShareBoxDialog(
+            onDismiss = { viewModel.onShareDismiss() },
+            onConfirm = { email -> viewModel.onShareConfirm(email) }
+        )
+    }
+
+}
+
+@Composable
+fun ShareBoxDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+    var email by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Share Box") },
+        text = {
+            Column {
+                Text("Enter the email of the user you want to invite:")
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text("Email") },
+                    singleLine = true
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(email) }) {
+                Text("Share")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }

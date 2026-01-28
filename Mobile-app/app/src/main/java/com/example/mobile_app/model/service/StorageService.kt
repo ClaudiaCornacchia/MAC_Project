@@ -13,6 +13,10 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import com.example.mobile_app.model.User
+import com.google.firebase.firestore.FieldValue
+import kotlinx.coroutines.flow.map
+import com.google.firebase.firestore.snapshots
+
 class StorageService @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val accountService: AccountService,
@@ -27,14 +31,20 @@ class StorageService @Inject constructor(
             val userId = user?.id ?: ""
 
             firestore.collection("boxes")
-                .whereEqualTo("ownerId", userId)
+                .whereArrayContains("sharedWith", userId)
                 .orderBy("createdAt", Query.Direction.DESCENDING)
                 .dataObjects() // This is a specialized Flow builder for Firestore
         }
 
     // 2. READ ONE: Get a specific box by ID
-    suspend fun getBox(boxId: String): Box? {
-        return firestore.collection("boxes").document(boxId).get().await().toObject()
+    fun getBox(boxId: String): Flow<Box> {
+        return firestore.collection("boxes")
+            .document(boxId)
+            .snapshots() // This is a specialized Flow builder for Firestore
+            .map { snapshot ->
+                // Convert the DocumentSnapshot to our Box object
+                snapshot.toObject(Box::class.java) ?: Box()
+            }
     }
 
     // 3. CREATE: Save a new box
@@ -66,6 +76,7 @@ class StorageService @Inject constructor(
         val boxWithInfo = box.copy(
             boxId = generatedId,
             ownerId = userId,
+            sharedWith = listOf(userId), // Allow owner by default
             titleSearch = box.title.lowercase(), // Auto-fill search field
             //qrCodeUrl = qrUrl,
             humanId = generatedHumanId
@@ -88,6 +99,35 @@ class StorageService @Inject constructor(
     suspend fun updateBoxFields(boxId: String, updates: Map<String, Any>) {
         // "update" only changes the fields provided in the map.
         // It fails if the document does not exist.
+        firestore.collection("boxes").document(boxId).update(updates).await()
+    }
+
+    // 5. SHARE BOX
+    suspend fun shareBoxWithUser(boxId: String, email: String) {
+        // 1. Search for the target user by email in the 'users' collection
+        val usersQuery = firestore.collection("users")
+            .whereEqualTo("email", email)
+            .get()
+            .await()
+
+        if (usersQuery.isEmpty) {
+            throw Exception("User not found with this email.")
+        }
+
+        // 2. Get the ID of the found user
+        val friendId = usersQuery.documents.first().id
+
+        // 3. Atomically update the box (Concurrency safe)
+        // FieldValue.arrayUnion adds the element to the array ONLY if it's not already there.
+        // This prevents duplicates and handles concurrent edits safely.
+        firestore.collection("boxes").document(boxId)
+            .update("sharedWith", FieldValue.arrayUnion(friendId))
+            .await()
+    }
+
+    //Update last access
+    suspend fun updateLastAccess(boxId: String) {
+        val updates = mapOf("lastAccess" to com.google.firebase.Timestamp.now())
         firestore.collection("boxes").document(boxId).update(updates).await()
     }
 }

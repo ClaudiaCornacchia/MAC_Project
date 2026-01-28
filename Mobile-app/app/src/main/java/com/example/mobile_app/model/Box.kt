@@ -11,9 +11,11 @@ data class Box(
     // but it is useful to have it in the body if you create it manually with a UUID)
     @DocumentId val boxId: String = "",
 
-    // THE LINK: The user's UID goes here (e.g., "Abc123XY...")
     // This is essential for Security Rules and query filtering (My Boxes vs Others).
     val ownerId: String = "",
+
+    // List of authorized ID (including the owner)
+    val sharedWith: List<String> = emptyList(),
 
     // Content
     val humanId: String = "",

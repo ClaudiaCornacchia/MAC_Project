@@ -299,11 +299,12 @@ fun NavGraphBuilder.boxGraph(appState: BoxAppState) {
             }
         )
 
-    ) {
+    ) { backStackEntry ->
+        val boxId = backStackEntry.arguments?.getString("boxId") ?: ""
         BoxDetailScreen(
+            boxId = boxId,
             // Case of redirecting from the QR code to the Box Detail screen
             openScreen = { route -> appState.navigateAndPopUp(route, BOX_DETAIL_SCREEN) },
-
             popUpScreen = { appState.popUp() }
         )
     }

@@ -17,6 +17,8 @@ import com.example.mobile_app.model.service.LocationService
 import com.example.mobile_app.model.service.StorageService
 import com.example.mobile_app.screens.BoxAppViewModel
 import com.google.firebase.firestore.GeoPoint
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 
 @HiltViewModel
 class BoxDetailViewModel @Inject constructor(
@@ -35,16 +37,33 @@ class BoxDetailViewModel @Inject constructor(
     var isUserAuthorized by mutableStateOf(true)
         private set
 
-    init {
+    var showShareDialog by mutableStateOf(false)
+        private set
+
+    var sharedNames by mutableStateOf<List<String>>(emptyList())
+        private set
+
+
+    fun initialize(boxId: String) {
         if (!accountService.hasUser()) {
             isUserAuthorized = false
         }
         else {
             launchCatching {
-                // Load box data immediately
-                val loadedBox = storageService.getBox(boxId)
-                if (loadedBox != null) {
-                    box = loadedBox
+                // Every time that you open the box detail page update last access
+                storageService.updateLastAccess(boxId)
+
+                // Listen for changes in the box
+                storageService.getBox(boxId).collect { newBox ->
+
+                    box = newBox
+
+                    // If the box is shared add the names
+                    if (newBox.sharedWith.isNotEmpty()) {
+                        loadSharedNames()
+                    } else {
+                        sharedNames = emptyList()
+                    }
                 }
             }
         }
@@ -115,6 +134,43 @@ class BoxDetailViewModel @Inject constructor(
             }
         }
     }
+
+    // SHARE BOX
+    fun onShareClick() {
+        showShareDialog = true
+    }
+
+    fun onShareDismiss() {
+        showShareDialog = false
+    }
+
+    fun onShareConfirm(email: String) {
+        showShareDialog = false
+        launchCatching {
+            if (email.isNotBlank()) {
+                storageService.shareBoxWithUser(box.boxId, email)
+            } else {
+                SnackbarManager.showMessage("Email cannot be empty.")
+            }
+        }
+    }
+
+    private fun loadSharedNames() {
+        launchCatching {
+            val names = box.sharedWith
+
+                .filter { it != accountService.currentUserId }
+                .map { memberId ->
+                    async { accountService.getUserName(memberId) }
+                }
+                .awaitAll() // Await for all coroutines to complete
+                .filter { it.isNotBlank() }
+
+            sharedNames = names
+        }
+    }
+
+
 
 
 }
