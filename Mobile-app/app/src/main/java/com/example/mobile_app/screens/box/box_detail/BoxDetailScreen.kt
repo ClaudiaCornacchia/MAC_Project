@@ -53,6 +53,8 @@ import androidx.compose.material.icons.filled.BrokenImage
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.ui.draw.clip
 import coil.compose.SubcomposeAsyncImage
+import com.google.android.gms.maps.CameraUpdateFactory
+
 @Composable
 fun BoxDetailScreen(
     boxId: String,
@@ -276,7 +278,7 @@ fun BoxDetailScreen(
                 Text("Location", style = MaterialTheme.typography.titleMedium)
 
                 if (box.location != null) {
-                    val boxPosition = LatLng(box.location.latitude, box.location.longitude)
+                    val boxPosition = LatLng(box.location!!.latitude, box.location!!.longitude)
 
                     // Camera State (Zoom level)
                     val cameraPositionState = rememberCameraPositionState {
@@ -285,6 +287,7 @@ fun BoxDetailScreen(
 
                     val markerState = rememberMarkerState(position = boxPosition)
 
+
                     // Address Text
                     if (box.locationAddress.isNotBlank()) {
                         Text(box.locationAddress, style = MaterialTheme.typography.bodySmall)
@@ -292,14 +295,25 @@ fun BoxDetailScreen(
 
                     Spacer(Modifier.height(8.dp))
 
+                    LaunchedEffect(box.location) {
+                        // Animate the camera to the new location
+                        val boxLatLng = LatLng(box.location!!.latitude, box.location!!.longitude)
+                        markerState.position = boxLatLng
+                        cameraPositionState.animate(
+                            update = CameraUpdateFactory.newLatLngZoom(boxLatLng, 15f),
+                            durationMs = 1000
+                        )
+                    }
+
                     // Map Component
                     GoogleMap(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(250.dp),
+                            .height(250.dp)
+                            .clip(RoundedCornerShape(16.dp)),
                         cameraPositionState = cameraPositionState
                     ) {
-                        // FIX: Ensure 'Marker' is imported from com.google.maps.android.compose
+
                         Marker(
                             state = markerState,
                             title = box.title,

@@ -348,7 +348,7 @@ fun NewBoxScreen(
                                 viewModel.onLocationQueryChange("")
                             }) {
                                 Icon(
-                                    imageVector = Icons.Default.Clear, 
+                                    imageVector = Icons.Default.Clear,
                                     contentDescription = "Clear",
                                     tint = Color.Gray
                                 )

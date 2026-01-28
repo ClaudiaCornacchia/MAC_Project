@@ -101,7 +101,9 @@ class BoxDetailViewModel @Inject constructor(
             // 1. Get the current GPS Location (High Accuracy)
             val location = locationService.getCurrentLocation()
 
-            if (location != null) {
+            val currentBox = box
+
+            if (location != null && currentBox != null) {
                 // Convert Android Location to Firestore GeoPoint
                 val newGeoPoint = GeoPoint(location.latitude, location.longitude)
 
@@ -109,7 +111,7 @@ class BoxDetailViewModel @Inject constructor(
                 val newAddress = locationService.getAddressFromGeoPoint(newGeoPoint)
 
                 // 2. Create a copy of the current box with new location data
-                val updatedBox = box.copy(
+                val updatedBox = currentBox.copy(
                     location = newGeoPoint,
                     locationAddress = newAddress
                 )
@@ -121,7 +123,7 @@ class BoxDetailViewModel @Inject constructor(
 
                 // 4. Save to Firestore Database
                 storageService.updateBoxFields(
-                    boxId = box.boxId,
+                    boxId = currentBox.boxId,
                     updates = mapOf(
                         "location" to newGeoPoint,
                         "locationAddress" to newAddress
