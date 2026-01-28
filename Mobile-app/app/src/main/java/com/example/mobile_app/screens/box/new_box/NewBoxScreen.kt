@@ -3,6 +3,7 @@ package com.example.mobile_app.screens.box.new_box
 
 // Android System & Permissions
 import android.Manifest
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 
@@ -61,6 +62,19 @@ import com.example.mobile_app.R
 import com.example.mobile_app.SnackbarManager
 
 
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.AddAPhoto
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -102,6 +116,69 @@ fun NewBoxScreen(
             }
         }
     )
+
+    //3. Camera permission launcher
+
+    // Let the user pick an image from their gallery without permissions
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        // If the user selected an image, update the ViewModel
+        if (uri != null) viewModel.onImageSelected(uri)
+    }
+
+    // Launch the camera when the user clicks the camera icon
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success && viewModel.tempPhotoUri != null) {
+            viewModel.onImageSelected(viewModel.tempPhotoUri!!)
+        }
+    }
+
+    // Temporary URI
+    fun launchCamera() {
+        try {
+            // Create temporary file
+            val tempFile = java.io.File.createTempFile("temp_box_image", ".jpg", context.cacheDir).apply {
+                createNewFile()
+                deleteOnExit()
+            }
+
+            // Generate URI using file provider
+            val authority = "${com.example.mobile_app.BuildConfig.APPLICATION_ID}.fileprovider"
+
+            val uri = androidx.core.content.FileProvider.getUriForFile(
+                context,
+                authority,
+                tempFile
+            )
+
+            // Save URI in ViewModel and launch
+            viewModel.tempPhotoUri = uri
+            cameraLauncher.launch(uri)
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            android.widget.Toast.makeText(context, "Error launching camera: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+        }
+    }
+    // Camera permission launcher
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            launchCamera()
+        } else {
+            android.widget.Toast.makeText(context, "Camera permission needed", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
+
+
+    var showSheet by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState()
+
+
 
     Column(
         modifier = Modifier
@@ -152,6 +229,99 @@ fun NewBoxScreen(
 
         Spacer(Modifier.height(16.dp))
 
+        // 4. PHOTO
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(220.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .clickable { showSheet = true }, // selector gallery or camera
+            contentAlignment = Alignment.Center
+        ) {
+            if (uiState.selectedImageUri != null) {
+                // if we have a selected image, show it
+                AsyncImage(
+                    model = uiState.selectedImageUri,
+                    contentDescription = "Selected Box Image",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+
+
+                Surface(
+                    color = Color.Black.copy(alpha = 0.5f),
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        "Tap to change",
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
+            } else {
+                // if we don't have a selected image, show a placeholder
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = Icons.Default.AddAPhoto,
+                        contentDescription = null,
+                        tint = Color.Gray,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text("Add a photo", color = Color.Gray)
+                }
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        // selector gallery or camera
+        if (showSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showSheet = false },
+                sheetState = sheetState,
+                dragHandle = { BottomSheetDefaults.DragHandle() }
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 40.dp, top = 8.dp, start = 16.dp, end = 16.dp)
+                ) {
+                    Text(
+                        text = "Select Photo",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+
+                    ListItem(
+                        headlineContent = { Text("Take a photo") },
+                        leadingContent = { Icon(Icons.Default.CameraAlt, contentDescription = null) },
+                        modifier = Modifier.clickable {
+                            showSheet = false
+                            cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
+                        }
+                    )
+
+                    // Option gallery
+                    ListItem(
+                        headlineContent = { Text("Choose from Gallery") },
+                        leadingContent = { Icon(Icons.Default.Image, contentDescription = null) },
+                        modifier = Modifier.clickable {
+                            showSheet = false
+                            galleryLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        }
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
         // 4. Location
         ExposedDropdownMenuBox(
             expanded = isDropdownExpanded,
@@ -178,7 +348,7 @@ fun NewBoxScreen(
                                 viewModel.onLocationQueryChange("")
                             }) {
                                 Icon(
-                                    imageVector = Icons.Default.Clear, // Serve import androidx.compose.material.icons.filled.Clear
+                                    imageVector = Icons.Default.Clear, 
                                     contentDescription = "Clear",
                                     tint = Color.Gray
                                 )

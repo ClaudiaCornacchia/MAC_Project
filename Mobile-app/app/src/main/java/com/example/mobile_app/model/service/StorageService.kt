@@ -1,6 +1,11 @@
 package com.example.mobile_app.model.service
 
 
+import android.net.Uri
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import dagger.hilt.android.qualifiers.ApplicationContext
 import com.example.mobile_app.model.Box
 import com.example.mobile_app.model.QrRequest
 import com.google.firebase.firestore.FirebaseFirestore
@@ -16,11 +21,19 @@ import com.example.mobile_app.model.User
 import com.google.firebase.firestore.FieldValue
 import kotlinx.coroutines.flow.map
 import com.google.firebase.firestore.snapshots
+import com.google.firebase.storage.FirebaseStorage
+import java.io.ByteArrayOutputStream
+import kotlinx.coroutines.async
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 class StorageService @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val accountService: AccountService,
-    private val qrApiService: QrApiService
+    private val qrApiService: QrApiService,
+    private val storage: FirebaseStorage,
+    @ApplicationContext private val context: Context,
+    private val applicationScope: CoroutineScope
 ) {
 
     // 1. READ ALL: Get all boxes for the current user
@@ -48,51 +61,77 @@ class StorageService @Inject constructor(
     }
 
     // 3. CREATE: Save a new box
-    suspend fun saveBox(box: Box) {
+    suspend fun saveBox(box: Box, imageUri: Uri?) {
         val userId = accountService.currentUserId
 
-        // FETCH USER DATA (To get the current counter)
-        // We need the freshest data from the server to avoid duplicates
+        // 1. FETCH USER DATA, we need the freshest data from the server to avoid duplicates
         val userDocRef = firestore.collection("users").document(userId)
-        val userSnapshot = userDocRef.get().await()
-        // Convert the document to our User object
-        val currentUser = userSnapshot.toObject(User::class.java) ?: User()
 
-        // CALCULATE THE NEW HUMAN ID
+        val userSnapshot = userDocRef.get().await()
+        val currentUser = userSnapshot.toObject(User::class.java) ?: User()
+        // Human readable id
         val nextNumber = currentUser.lastBoxNumber + 1
         val generatedHumanId = "$nextNumber"
 
-        // Generate the document ID locally
         val newDocRef = firestore.collection("boxes").document()
         val generatedId = newDocRef.id
 
-        // CALL THE SERVER NODE.JS
-//        val qrUrl = try {
-//            qrApiService.generateQr(QrRequest(boxId = generatedId)).qrCodeUrl
-//        } catch (e: Exception) {
-//            throw Exception("Error generating QR code.")
-//        }
+        val initialStatusImage = if (imageUri != null) "UPLOADING" else ""
 
-        val boxWithInfo = box.copy(
+        // 2. Initial (fast) save
+        val initialBox = box.copy(
             boxId = generatedId,
             ownerId = userId,
-            sharedWith = listOf(userId), // Allow owner by default
-            titleSearch = box.title.lowercase(), // Auto-fill search field
-            //qrCodeUrl = qrUrl,
-            humanId = generatedHumanId
-            // createdAt and lastAccess are handled automatically by @ServerTimestamp
+            sharedWith = listOf(userId),
+            titleSearch = box.title.lowercase(),
+            humanId = generatedHumanId,
+            imageUrl = initialStatusImage,
+            qrCodeUrl = ""
         )
 
-        // Save in Firestore
-        // We must save the Box AND update the User's counter at the same time.
-        // If one fails, both fail. This prevents data inconsistency.
         val batch = firestore.batch()
-        // Save the new Box
-        batch.set(newDocRef, boxWithInfo)
-        // Update the User's lastBoxNumber
+        batch.set(newDocRef, initialBox)
         batch.update(userDocRef, "lastBoxNumber", nextNumber)
-        // Commit both operations
+
         batch.commit().await()
+
+        // 3. Background upload, use applicationScope.launch
+        applicationScope.launch {
+            try {
+                // A. Upload the image to Firebase Storage
+                var finalImageUrl = ""
+                if (imageUri != null) {
+                    val compressedData = getCompressedImage(imageUri)
+                    if (compressedData != null) {
+                        val storageRef = storage.reference.child("box_images/$userId/$generatedId.jpg")
+                        storageRef.putBytes(compressedData).await()
+                        finalImageUrl = storageRef.downloadUrl.await().toString()
+                    }
+                }
+
+                // B. CALL THE SERVER NODE.JS to create qrcode and save qrcode link
+               val qrUrl = try {
+                    qrApiService.generateQr(QrRequest(boxId = generatedId)).qrCodeUrl
+               } catch (e: Exception) {
+                    throw Exception("Error generating QR code.")
+                }
+
+                // Final update
+                firestore.collection("boxes").document(generatedId).update(
+                    mapOf(
+                        "imageUrl" to finalImageUrl,
+                        "qrCodeUrl" to qrUrl
+                    )
+                ).await()
+
+                android.util.Log.d("BACKGROUND_UPLOAD", "Upload completato in background!")
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+                firestore.collection("boxes").document(generatedId).update("imageUrl", "").await()
+            }
+        }
+
     }
 
     // 4. UPDATE: Update an existing box
@@ -129,5 +168,40 @@ class StorageService @Inject constructor(
     suspend fun updateLastAccess(boxId: String) {
         val updates = mapOf("lastAccess" to com.google.firebase.Timestamp.now())
         firestore.collection("boxes").document(boxId).update(updates).await()
+    }
+
+    // Compress the image
+    private fun getCompressedImage(uri: Uri): ByteArray? {
+        return try {
+            // 1. Decode the image from the URI
+            val inputStream = context.contentResolver.openInputStream(uri)
+            val originalBitmap = BitmapFactory.decodeStream(inputStream)
+            inputStream?.close()
+
+            // 2. Resize the image if necessary
+            val maxDimension = 1024
+            var width = originalBitmap.width
+            var height = originalBitmap.height
+
+            if (width > maxDimension || height > maxDimension) {
+                val ratio = width.toFloat() / height.toFloat()
+                if (width > height) {
+                    width = maxDimension
+                    height = (width / ratio).toInt()
+                } else {
+                    height = maxDimension
+                    width = (height * ratio).toInt()
+                }
+            }
+            val resizedBitmap = Bitmap.createScaledBitmap(originalBitmap, width, height, true)
+
+            // 3. Compress the image to a ByteArray
+            val outputStream = ByteArrayOutputStream()
+            resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
+            outputStream.toByteArray()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
     }
 }

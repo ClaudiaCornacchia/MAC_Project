@@ -36,6 +36,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.*
 import androidx.compose.material.icons.filled.Refresh
 import android.Manifest
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Share
@@ -44,8 +46,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-
-
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.BrokenImage
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.ui.draw.clip
+import coil.compose.SubcomposeAsyncImage
 @Composable
 fun BoxDetailScreen(
     boxId: String,
@@ -99,6 +106,71 @@ fun BoxDetailScreen(
                 Text(box.title, style = MaterialTheme.typography.headlineMedium)
 
                 Spacer(Modifier.height(8.dp))
+
+                //2. IMAGE
+                when {
+                    // CASE A: image is uploading
+                    box.imageUrl == "UPLOADING" -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(250.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(32.dp),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                Text("Uploading photo...", style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                        Spacer(Modifier.height(16.dp))
+                    }
+
+                    // CASE B: image is available, we just need to wait for the download, use SubcomposeAsyncImage
+                    box.imageUrl.startsWith("http") -> {
+                        SubcomposeAsyncImage(
+                            model = box.imageUrl,
+                            contentDescription = "Box Image",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(250.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentScale = ContentScale.Crop,
+
+                            loading = {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(32.dp),
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            },
+
+                            error = {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.BrokenImage, contentDescription = "Error", tint = Color.Gray)
+                                }
+                            }
+                        )
+                        Spacer(Modifier.height(16.dp))
+                    }
+
+                    // CASE C: no image to display
+                    else -> {
+                    }
+                }
 
                 // 2. DESCRIPTION
                 Text("Description:", style = MaterialTheme.typography.labelMedium)

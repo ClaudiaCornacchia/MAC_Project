@@ -10,6 +10,8 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
+import com.google.firebase.storage.FirebaseStorage
+import com.google.firebase.storage.storage
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -25,5 +27,11 @@ object FirebaseModule {
     @Singleton
     fun firestore(): FirebaseFirestore {
         return Firebase.firestore
+    }
+
+    @Provides
+    @Singleton
+    fun storage(): FirebaseStorage {
+        return Firebase.storage
     }
 }

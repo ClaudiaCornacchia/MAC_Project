@@ -1,6 +1,7 @@
 package com.example.mobile_app.screens.box.new_box
 
 import android.app.Application
+import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -45,6 +46,8 @@ class NewBoxViewModel @Inject constructor(
     // List of suggestions from Google
     var locationPredictions by mutableStateOf<List<AutocompleteResult>>(emptyList())
         private set
+
+    var tempPhotoUri: Uri? = null
 
     // Job to handle search debounce (delay)
     private var searchJob: Job? = null
@@ -218,6 +221,11 @@ class NewBoxViewModel @Inject constructor(
         }
     }
 
+    // PHOTOS
+    fun onImageSelected(uri: Uri) {
+        uiState = uiState.copy(selectedImageUri = uri)
+    }
+
     // 3. SAVE BOX
     fun onDoneClick(popUpScreen: () -> Unit) {
         launchCatching {
@@ -231,7 +239,7 @@ class NewBoxViewModel @Inject constructor(
                 locationAddress = uiState.locationAddress
 
             )
-            storageService.saveBox(newBox)
+            storageService.saveBox(newBox, uiState.selectedImageUri)
             popUpScreen() // Go back to list
         }
     }
@@ -246,5 +254,6 @@ data class NewBoxUiState(
     val fillStatus: String = "GREEN", // Default Empty
     val secretNote: String = "",
     val location: GeoPoint? = null,
-    val locationAddress: String = ""
+    val locationAddress: String = "",
+    val selectedImageUri: Uri? = null
 )
