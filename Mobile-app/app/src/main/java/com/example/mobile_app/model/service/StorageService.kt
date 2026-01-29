@@ -110,8 +110,13 @@ class StorageService @Inject constructor(
                 }
 
                 // B. CALL THE SERVER NODE.JS to create qrcode and save qrcode link
+                val user = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+
+                val tokenResult = user?.getIdToken(true)?.await()
+                val tokenString = "Bearer ${tokenResult?.token}"
+
                val qrUrl = try {
-                    qrApiService.generateQr(QrRequest(boxId = generatedId)).qrCodeUrl
+                    qrApiService.generateQr(tokenString, QrRequest(boxId = generatedId)).qrCodeUrl
                } catch (e: Exception) {
                     throw Exception("Error generating QR code.")
                 }

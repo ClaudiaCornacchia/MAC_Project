@@ -3,42 +3,35 @@ const QRCode = require('qrcode');
 const admin = require('firebase-admin');
 const { getStorage } = require('firebase-admin/storage');
 
-// Initializza Firebase Admin SDK
-// If we are in Cloud Run, use the default credentials
-if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-    admin.initializeApp({
-        credential: admin.credential.applicationDefault(), // Usa l'identità del server Cloud Run
-        storageBucket: 'mac-project-480111.firebasestorage.app'
-    });
-} else {
-    // Fallback for local testing with explicit file
-    try {
-        const serviceAccount = require('./serviceAccountKey.json');
-        admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount),
-            storageBucket: 'mac-project-480111.firebasestorage.app'
-        });
-    } catch (e) {
-        console.error("I can't find credentials neither automatic nor local file.");
-    }
-}
+admin.initializeApp({
+    // If you are running this code in Cloud Run, it will use the default service account.
+    // If you are running this code locally, it will look for the GOOGLE_APPLICATION_CREDENTIALS variable on your PC.
+    storageBucket: 'mac-project-480111.firebasestorage.app'
+});
 
 const app = express();
 app.use(express.json());
 
 app.post('/generate-qr', async (req, res) => {
   try {
+    // 1. CHECK SECURITY, take the token from the header
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+       return res.status(401).send('Unauthorized: No token provided');
+    }
+    const idToken = authHeader.split('Bearer ')[1];
+
+    // 2. VERIFY TOKEN, if invalid, throw error
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+
     const { boxId } = req.body; // Android sends us the ID
-    
     if (!boxId) return res.status(400).send('Missing boxId');
 
-    // 1. GENERATE THE QR (As Buffer in memory)
-    // Advice: In the QR don't put just the ID, put a Deep Link!
-    // Example: "boxapp://open?id=xyz" so if you scan it, the app opens.
+    // 3. GENERATE THE QR (As Buffer in memory)
     const qrData = `boxapp://box/${boxId}`; 
     const qrBuffer = await QRCode.toBuffer(qrData);
 
-    // 2. UPLOAD TO FIREBASE STORAGE
+    // 4. UPLOAD TO FIREBASE STORAGE
     const bucket = getStorage().bucket();
     const file = bucket.file(`qrcodes/${boxId}.png`);
     
@@ -47,16 +40,16 @@ app.post('/generate-qr', async (req, res) => {
       public: true // Or manage access tokens
     });
 
-    // 3. GET THE PUBLIC URL
+    // 5. GET THE PUBLIC URL
     // (In Firebase Storage public files have a standard format)
     const publicUrl = `https://storage.googleapis.com/${bucket.name}/qrcodes/${boxId}.png`;
 
-    // 4. RESPOND TO ANDROID
+    // 6. RESPOND TO ANDROID
     res.json({ qrCodeUrl: publicUrl });
 
   } catch (error) {
-    console.error(error);
-    res.status(500).send('Error generating QR');
+    console.error("Security Error:", error.message);
+    res.status(403).send('Unauthorized: Invalid token')
   }
 });
 
