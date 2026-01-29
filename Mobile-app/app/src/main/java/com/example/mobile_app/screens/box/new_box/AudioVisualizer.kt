@@ -17,12 +17,11 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
-
+import kotlin.math.pow
 @Composable
 fun AudioVisualizer(
     modifier: Modifier = Modifier,
@@ -35,55 +34,47 @@ fun AudioVisualizer(
     val amplitudes = remember { mutableStateListOf<Float>() }
     val maxBars = 45
 
-    // 3. DYNAMIC STATE FOR AUTO-CALIBRATION
-    // We track the highest volume seen recently to auto-scale the graph.
-    // Default to 5.0 to avoid division by zero.
-    var maxObservedVolume by remember { mutableFloatStateOf(5.0f) }
-
-    // Smoothing variable for fluid movement
-    var currentSmoothedLevel by remember { mutableFloatStateOf(0f) }
+    // 3. DYNAMIC RANGE
+    var maxObservedVolume by remember { mutableFloatStateOf(15.0f) }
 
     // 4. OPTIMIZED UPDATE LOOP (20 FPS)
     LaunchedEffect(Unit) {
         while (isActive) {
-            // Wait 50ms to prevent CPU Lag (approx 20 updates/sec)
             delay(50)
 
             val rawInput = currentRawLoudness
 
-            // --- AUTO-CALIBRATION LOGIC ---
-            // If current sound is louder than max, update max.
+            // Auto calibration
             if (rawInput > maxObservedVolume) {
-                maxObservedVolume = rawInput
+                maxObservedVolume = rawInput * 1.2f // Leave margine
             } else {
-                // Decay: Slowly lower max volume so bars don't stay tiny forever
-                maxObservedVolume -= 0.1f
-                if (maxObservedVolume < 3.0f) maxObservedVolume = 3.0f
+                // Low decay to keep stability
+                maxObservedVolume -= 0.15f
+                if (maxObservedVolume < 10.0f) maxObservedVolume = 10.0f
             }
 
-            // --- NORMALIZATION ---
-            val noiseFloor = -1.5f // Ignore background noise
-            var targetLevel = (rawInput - noiseFloor) / (maxObservedVolume - noiseFloor)
+            // Normalization
+            val noiseFloor = -1.0f
+            val adjustedInput = (rawInput - noiseFloor).coerceAtLeast(0f)
 
-            // Clamp results
-            if (targetLevel < 0.05f) targetLevel = 0.05f // Minimum dot size
-            if (targetLevel > 1.0f) targetLevel = 1.0f
+            var targetLevel = (adjustedInput / maxObservedVolume).coerceIn(0f, 1f)
 
-            // --- SMOOTHING (Interpolation) ---
-            // Move 25% towards the target each frame for a fluid look
-            currentSmoothedLevel += (targetLevel - currentSmoothedLevel) * 0.25f
+            // Curve exponential
+            targetLevel = targetLevel.pow(1.8f)
 
-            // Update List
-            amplitudes.add(currentSmoothedLevel)
+            // Soglia minima
+            if (targetLevel < 0.03f) targetLevel = 0.03f
+
+            // No smoothing
+            amplitudes.add(targetLevel)
             if (amplitudes.size > maxBars) {
                 amplitudes.removeAt(0)
             }
         }
     }
 
-    // Colors
+    // All spikes same color
     val barColor = MaterialTheme.colorScheme.primary
-    val highVolumeColor = Color.Red
 
     Canvas(
         modifier = modifier
@@ -96,9 +87,9 @@ fun AudioVisualizer(
 
         if (amplitudes.isEmpty()) return@Canvas
 
-        val totalGapWidth = 6f
-        val availableWidth = canvasWidth - (totalGapWidth * (maxBars - 1))
-        val barWidth = (availableWidth / maxBars).coerceAtLeast(2f)
+        val totalGapWidth = 10f // Space from spike
+        val barWidth = 7f // Width of spike
+
 
         // Draw from Right to Left
         val startIndex = (maxBars - amplitudes.size).coerceAtLeast(0)
@@ -107,11 +98,11 @@ fun AudioVisualizer(
             val visualIndex = index + startIndex
             val x = visualIndex * (barWidth + totalGapWidth) + (barWidth / 2)
 
-            val barHeight = amplitude * canvasHeight * 0.9f
-            val currentColor = if (amplitude > 0.75f) highVolumeColor else barColor
+            // Calculate the height of the bar based on the amplitude
+            val barHeight = (amplitude * canvasHeight * 1.1f).coerceAtMost(canvasHeight * 0.98f)
 
             drawLine(
-                color = currentColor,
+                color = barColor,
                 start = Offset(x, centerY - barHeight / 2),
                 end = Offset(x, centerY + barHeight / 2),
                 strokeWidth = barWidth,
