@@ -225,11 +225,29 @@ class BoxDetailViewModel @Inject constructor(
                 "locationAddress" to draftBox.locationAddress
             )
 
+            if (draftBox.location != null) {
+                updates["location"] = draftBox.location!!
+            }
+
             storageService.updateBoxFast(
                 boxId = draftBox.boxId,
                 updates = updates,
                 newImageUri = newPhotoUri
             )
+
+            val currentBox = box
+            if (currentBox != null) {
+                box = currentBox.copy(
+                    title = draftBox.title,
+                    description = draftBox.description,
+                    fillStatus = draftBox.fillStatus,
+                    isFragile = draftBox.isFragile,
+                    secretNote = draftBox.secretNote,
+                    locationAddress = draftBox.locationAddress,
+
+                    location = draftBox.location ?: currentBox.location
+                )
+            }
 
             newPhotoUri = null
             isEditing = false
