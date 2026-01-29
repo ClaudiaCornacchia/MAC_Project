@@ -17,6 +17,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -32,6 +33,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
@@ -75,6 +77,7 @@ fun BoxesScreen(
 
     // Scan qr and add box buttons
     Scaffold(
+        contentWindowInsets = WindowInsets(0),
         floatingActionButton = {
             AnimatedVisibility(
                 visible = fabVisible,
@@ -94,6 +97,7 @@ fun BoxesScreen(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
                 .padding(paddingValues)
+
         ) {
             // Header section with gradient
             ModernHeader()
@@ -134,7 +138,7 @@ private fun ModernHeader() {
                     )
                 )
             )
-            .padding(horizontal = 24.dp, vertical = 20.dp)
+            .padding(horizontal = 24.dp, vertical = 10.dp)
     ) {
         Column {
             Text(
@@ -275,6 +279,20 @@ private fun BoxesList(
 }
 
 @Composable
+fun getConsistentPastelColor(id: String): Color {
+    val colors = listOf(
+        MaterialTheme.colorScheme.primaryContainer,
+        MaterialTheme.colorScheme.secondaryContainer,
+        MaterialTheme.colorScheme.tertiaryContainer,
+        MaterialTheme.colorScheme.errorContainer,
+        MaterialTheme.colorScheme.surfaceVariant
+    )
+
+    val index = (id.hashCode() % colors.size).let { if (it < 0) -it else it }
+    return colors[index]
+}
+
+@Composable
 private fun ModernBoxCard(
     box: Box,
     currentUserId: String,
@@ -337,110 +355,118 @@ private fun ModernBoxCard(
                 },
                 onClickLabel = "Open box details"
             ),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.elevatedCardElevation(
             defaultElevation = 2.dp,
-            pressedElevation = 8.dp
+            pressedElevation = 6.dp
         )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(16.dp), // Internal padding for the card
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Icon section with colored background
-            BoxIconSection(isFragile = box.isFragile, fillStatus = box.fillStatus)
+            // 1. Icon section with colored background (on the left)
+            BoxIconSection(boxId = box.humanId)
 
-            Spacer(modifier = Modifier.width(4.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
-            // Content section
+            // 2. Content section (Title, fragile, ID, owner)
             Column(
                 modifier = Modifier.weight(1f)
             ) {
-                // Title
-                Text(
-                    text = box.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                // Title and fragile
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    // Title
+                    Text(
+                        text = box.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    // Fragile indicator
 
-                // Human ID badge
-                if (box.humanId.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                    ) {
-                        Text(
-                            text = "#${box.humanId}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                        )
+                    // Human ID badge
+                    if (box.humanId.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                        ) {
+                            Text(
+                                text = "#${box.humanId}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                            )
+                        }
                     }
-                }
 
+
+                }
                 Spacer(modifier = Modifier.height(4.dp))
 
 
-                // 2. SHARED OWNER BADGE
+                // SHARED OWNER BADGE
                 if (isSharedWithMe) {
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.alpha(0.7f)
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
 
-                            Text(
-                                text = "Owner: ${ownerName ?: "Loading..."}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.tertiary,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Filled.Person,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(2.dp))
+                        // Nome
+                        Text(
+                            text = ownerName ?: "Unknown",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
 
 
-
-            // Trailing indicators
-            Column(
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+            // Fill status (empty, full, half) and human ID
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                // Fragile indicator
+
                 if (box.isFragile) {
-                    Surface(
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.errorContainer
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Warning,
-                            contentDescription = "Fragile",
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier
-                                .padding(8.dp)
-                                .size(20.dp)
-                        )
-                    }
+
+                Icon(
+                    imageVector = Icons.Filled.Warning,
+                    contentDescription = "Fragile",
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier
+                        .padding(6.dp)
+                        .size(18.dp)
+                )
+
                 }
 
                 // Fill status indicator
                 FillStatusIndicator(fillStatus = box.fillStatus)
+
+
+
             }
         }
     }
@@ -448,43 +474,23 @@ private fun ModernBoxCard(
 
 
 @Composable
-private fun BoxIconSection(isFragile: Boolean, fillStatus: String) {
-    val backgroundColor by animateColorAsState(
-        targetValue = when {
-            isFragile -> MaterialTheme.colorScheme.errorContainer
-            fillStatus == "FULL" -> MaterialTheme.colorScheme.tertiaryContainer
-            else -> MaterialTheme.colorScheme.primaryContainer
-        },
-        animationSpec = tween(300),
-        label = "backgroundColor"
-    )
+private fun BoxIconSection(boxId: String) {
+    val backgroundColor = getConsistentPastelColor(boxId)
 
-    val iconColor by animateColorAsState(
-        targetValue = when {
-            isFragile -> MaterialTheme.colorScheme.error
-            fillStatus == "FULL" -> MaterialTheme.colorScheme.tertiary
-            else -> MaterialTheme.colorScheme.primary
-        },
-        animationSpec = tween(300),
-        label = "iconColor"
-    )
+    val iconColor = MaterialTheme.colorScheme.onSecondaryContainer
 
     Box(
         modifier = Modifier
-            .size(56.dp)
+            .size(52.dp)
             .clip(RoundedCornerShape(14.dp))
             .background(backgroundColor),
         contentAlignment = Alignment.Center
     ) {
         Icon(
-            imageVector = when {
-                isFragile -> Icons.Outlined.BrokenImage
-                fillStatus == "FULL" -> Icons.Filled.Inventory2
-                else -> Icons.Outlined.Inventory2
-            },
+            imageVector = Icons.Filled.Inventory2,
             contentDescription = null,
             tint = iconColor,
-            modifier = Modifier.size(28.dp)
+            modifier = Modifier.size(26.dp)
         )
     }
 }
@@ -498,22 +504,18 @@ private fun FillStatusIndicator(fillStatus: String) {
         else -> "N/A" to Color.Gray
     }
 
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    Surface(
+        color = color.copy(alpha = 0.1f),
+        border = BorderStroke(1.dp, color.copy(alpha = 0.2f)),
+        shape = CircleShape
     ) {
         Text(
             text = text,
+            color = color,
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.Medium
-        )
+            fontWeight = FontWeight.Bold,
 
-        Box(
-            modifier = Modifier
-                .size(12.dp)
-                .background(color = color, shape = CircleShape)
-
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
         )
     }
 }
@@ -548,7 +550,7 @@ private fun EmptyState(hasActiveFilters: Boolean) {
 
         Text(
             text = if (hasActiveFilters)
-                "Try adjusting your search or filters"
+                "Try adjusting your search"
             else
                 "Create your first box to get started!",
             style = MaterialTheme.typography.bodyMedium,
@@ -564,7 +566,7 @@ private fun FloatingActionButtons(
 ) {
     Column(
         horizontalAlignment = Alignment.End,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // Scan QR FAB
         SmallFloatingActionButton(
@@ -596,7 +598,7 @@ private fun FloatingActionButtons(
             Icon(
                 Icons.Filled.Add,
                 contentDescription = "Add Box",
-                modifier = Modifier.size(28.dp)
+                modifier = Modifier.size(26.dp)
             )
         }
     }
