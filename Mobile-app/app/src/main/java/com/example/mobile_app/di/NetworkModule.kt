@@ -14,9 +14,7 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    // With Emulator use "http://10.0.2.2:3000/"
-    // With physical device: use local IP es. "http://192.168.1.X:3000/"
-    private const val BASE_URL = "http://192.168.1.8:3000/"
+    private const val BASE_URL = "https://qr-generator-service-796598132362.europe-west1.run.app/"
 
     @Provides
     @Singleton
