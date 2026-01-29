@@ -1,6 +1,5 @@
 package com.example.mobile_app
 
-
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -29,6 +28,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.clip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
@@ -39,18 +41,10 @@ import com.example.mobile_app.screens.box.box_detail.BoxDetailScreen
 import com.example.mobile_app.screens.box.new_box.NewBoxScreen
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material3.Icon
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.IconButton
 import androidx.compose.runtime.getValue
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navDeepLink
 import com.example.mobile_app.screens.scan_qr.ScanQrScreen
-import androidx.compose.material.icons.filled.FlashlightOn
-import androidx.compose.material.icons.filled.FlashlightOff
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.LocalContext
@@ -61,7 +55,21 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.hardware.camera2.CameraManager
 import androidx.compose.runtime.setValue
-
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.font.FontWeight
+import kotlinx.coroutines.delay
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 
 
 @Composable
@@ -93,11 +101,6 @@ fun BoxApp() {
                             // We use a small buffer to avoid flickering
                             isDarkEnvironment = lux < 10f
 
-                            // Optional: If it gets bright, auto-turn off flash
-                            if (lux > 50f && isFlashlightOn) {
-                                // You might want to turn it off automatically,
-                                // but for now, we just hide the icon (logic below handles visual)
-                            }
                         }
                     }
                     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
@@ -112,7 +115,7 @@ fun BoxApp() {
             fun toggleFlashlight() {
                 try {
                     val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
-                    val cameraId = cameraManager.cameraIdList[0] // Solitamente la camera posteriore
+                    val cameraId = cameraManager.cameraIdList[0]
                     val newState = !isFlashlightOn
                     cameraManager.setTorchMode(cameraId, newState)
                     isFlashlightOn = newState
@@ -128,21 +131,12 @@ fun BoxApp() {
             // Where we do not want the bar
             val noBarScreens = listOf(SPLASH_SCREEN, SIGN_IN_SCREEN, SIGN_UP_SCREEN)
             val showTopBar = currentRoute !in noBarScreens
-            //Title dynamically
-            val topBarTitle = when {
-                currentRoute == BOXES_SCREEN -> "My Boxes"
-                currentRoute == NEW_BOX_SCREEN -> "New Box"
-                currentRoute == ACCOUNT_CENTER_SCREEN -> "My Profile"
-                currentRoute.startsWith("BoxDetailScreen") -> "Box Details"
-                else -> "Box App"
-            }
 
             // Changed the snackBarHostState popup style with custom layout
             Scaffold(
                 topBar = {
                     if (showTopBar) {
                         BoxTopAppBar(
-                            title = topBarTitle,
                             onProfileClick = { appState.navigate(ACCOUNT_CENTER_SCREEN) },
                             // Show icon ONLY if it is dark OR if the flash is already on (so you can turn it off)
                             showFlashlight = isDarkEnvironment || isFlashlightOn,
@@ -166,11 +160,6 @@ fun BoxApp() {
                                 modifier = Modifier.padding(16.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-//                                Icon(
-//                                    painter = painterResource(id = R.drawable.ic_warning),
-//                                    contentDescription = null,
-//                                    tint = Color.White
-//                                )
 
                                 Spacer(modifier = Modifier.width(12.dp))
 
@@ -208,39 +197,203 @@ fun rememberAppState(
     }
 }
 
+
+@Composable
+fun BoxlyLogo(modifier: Modifier = Modifier) {
+    // Modern, minimalist box icon with gradient
+    val gradient = Brush.linearGradient(
+        colors = listOf(
+            MaterialTheme.colorScheme.primary,
+            MaterialTheme.colorScheme.tertiary
+        )
+    )
+
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(gradient),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Inventory2,
+            contentDescription = "Boxly Logo",
+            tint = Color.White,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(6.dp)
+        )
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BoxTopAppBar(
-    title: String,
     showFlashlight: Boolean,       // Should the icon appear? (Controlled by Light Sensor)
     isFlashlightOn: Boolean,       // Is the torch currently active?
     onFlashlightClick: () -> Unit, // Action to toggle torch
     onProfileClick: () -> Unit
 ) {
-    TopAppBar(
-        title = { Text(title) },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-        ),
-        actions = {
-            // Flashlight icon logic
-            if (showFlashlight) {
-                IconButton(onClick = onFlashlightClick) {
-                    Icon(
-                        imageVector = if (isFlashlightOn) Icons.Filled.FlashlightOff else Icons.Filled.FlashlightOn,
-                        contentDescription = "Toggle Flashlight"
-                    )
-                }
-            }
-
-            IconButton(onClick = onProfileClick) {
-                Icon(Icons.Filled.AccountCircle, contentDescription = "Profile")
-            }
-        }
+    // Animated background color
+    val backgroundColor by animateColorAsState(
+        targetValue = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+        animationSpec = tween(300),
+        label = "backgroundColor"
     )
+
+    Surface(
+        color = backgroundColor,
+        shadowElevation = 4.dp,
+        tonalElevation = 0.dp
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
+                            Color.Transparent
+                        )
+                    )
+                )
+        ) {
+            TopAppBar(
+                title = {
+                    // Boxly branding with logo
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        // App Logo
+                        BoxlyLogo(modifier = Modifier.size(32.dp))
+
+                        // App Name
+                        Text(
+                            text = "Boxly",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                ),
+                actions = {
+                    // Flashlight icon with animation
+                    if (showFlashlight) {
+                        FlashlightButton(
+                            isFlashlightOn = isFlashlightOn,
+                            onClick = onFlashlightClick
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(4.dp))
+
+                    // Profile button with modern styling
+                    ProfileButton(onClick = onProfileClick)
+
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+            )
+        }
+    }
 }
 
+@Composable
+private fun FlashlightButton(
+    isFlashlightOn: Boolean,
+    onClick: () -> Unit
+) {
+    val scale by animateFloatAsState(
+        targetValue = if (isFlashlightOn) 1.1f else 1f,
+        animationSpec = tween(200),
+        label = "flashlightScale"
+    )
+
+    val iconColor by animateColorAsState(
+        targetValue = if (isFlashlightOn)
+            MaterialTheme.colorScheme.primary
+        else
+            MaterialTheme.colorScheme.onSurfaceVariant,
+        animationSpec = tween(200),
+        label = "flashlightColor"
+    )
+
+    val backgroundColor by animateColorAsState(
+        targetValue = if (isFlashlightOn)
+            MaterialTheme.colorScheme.primaryContainer
+        else
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        animationSpec = tween(200),
+        label = "flashlightBackgroundColor"
+    )
+
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier
+            .scale(scale)
+            .size(42.dp)
+            .clip(CircleShape)
+            .background(backgroundColor)
+    ) {
+        Icon(
+            imageVector = if (isFlashlightOn) Icons.Filled.FlashlightOff else Icons.Filled.FlashlightOn,
+            contentDescription = if (isFlashlightOn) "Turn off flashlight" else "Turn on flashlight",
+            tint = iconColor,
+            modifier = Modifier.size(22.dp)
+        )
+    }
+}
+
+@Composable
+private fun ProfileButton(onClick: () -> Unit) {
+    var isPressed by remember { mutableStateOf(false) }
+
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.9f else 1f,
+        animationSpec = tween(100),
+        label = "profileScale"
+    )
+
+    Box(
+        modifier = Modifier
+            .size(42.dp)
+            .scale(scale)
+            .clip(CircleShape)
+            .background(
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.primaryContainer,
+                        MaterialTheme.colorScheme.secondaryContainer
+                    )
+                )
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        IconButton(
+            onClick = {
+                isPressed = true
+                onClick()
+            }
+        ) {
+            Icon(
+                imageVector = Icons.Filled.AccountCircle,
+                contentDescription = "Profile",
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.size(26.dp)
+            )
+        }
+    }
+
+    LaunchedEffect(isPressed) {
+        if (isPressed) {
+            delay(100)
+            isPressed = false
+        }
+    }
+}
 fun NavGraphBuilder.boxGraph(appState: BoxAppState) {
 
     // 1. Authentication
