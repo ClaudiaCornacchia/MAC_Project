@@ -98,7 +98,7 @@ fun NewBoxScreen(
                 viewModel.startListening()
             } else {
                 // Show snackbar: Permission needed
-                SnackbarManager.showMessage(context.getString(R.string.permission_needed))
+                SnackbarManager.showMessage("Permission needed")
 
             }
         }
@@ -112,7 +112,7 @@ fun NewBoxScreen(
                 // If granted, call the ViewModel to capture the GPS coordinates
                 viewModel.captureCurrentLocation()
             } else {
-                SnackbarManager.showMessage(context.getString(R.string.permission_needed))
+                SnackbarManager.showMessage("Permission needed")
             }
         }
     )

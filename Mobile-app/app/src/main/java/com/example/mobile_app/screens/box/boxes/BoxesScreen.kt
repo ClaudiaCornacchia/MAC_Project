@@ -46,13 +46,23 @@ import android.os.Build
 import android.os.Vibrator
 import android.content.Context
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+
 
 @Composable
 fun BoxesScreen(
     openScreen: (String) -> Unit,
     viewModel: BoxesViewModel = hiltViewModel()
 ) {
-    val boxes by viewModel.boxes.collectAsState(emptyList())
+    // 1. Observe the FILTERED list (Logic is handled in the ViewModel)
+    val boxes by viewModel.boxes.collectAsState()
+
+    // 2. Observe UI states for the Search Bar and Filter Chip
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val isUnusedFilterActive by viewModel.showUnusedOnly.collectAsState()
 
     Scaffold(
         floatingActionButton = {
@@ -87,6 +97,60 @@ fun BoxesScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+            // SEARCH & FILTER SECTION
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                // A. Search Bar
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { viewModel.onSearchQueryChange(it) },
+                    placeholder = { Text("Search boxes...") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                    trailingIcon = {
+                        // Show Clear ('X') button only if there is text
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { viewModel.onSearchQueryChange("") }) {
+                                Icon(Icons.Default.Clear, contentDescription = "Clear")
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // B. Filter Chips Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = isUnusedFilterActive,
+                        onClick = { viewModel.toggleUnusedFilter() },
+                        label = { Text("Unused > 1 Year") },
+                        leadingIcon = if (isUnusedFilterActive) {
+                            { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                        } else {
+                            { Icon(Icons.Default.History, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                    )
+                }
+            }
+
+            // LIST SECTION
             if (boxes.isEmpty()) {
                 Text(
                     text = "No boxes yet. Add one!",
@@ -140,10 +204,8 @@ fun BoxItem(box: Box, onBoxClick: () -> Unit) {
 
                         if (vibrator.hasVibrator()) {
                             if (Build.VERSION.SDK_INT >= 26) {
-                                // Vibra per 500 millisecondi
                                 vibrator.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE))
                             } else {
-                                // Vecchio metodo per Android < 8.0
                                 vibrator.vibrate(500)
                             }
                         }

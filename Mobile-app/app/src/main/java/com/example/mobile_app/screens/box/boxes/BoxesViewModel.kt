@@ -1,14 +1,96 @@
 package com.example.mobile_app.screens.box.boxes
 
+import androidx.lifecycle.viewModelScope
 import com.example.mobile_app.model.service.StorageService
 import com.example.mobile_app.screens.BoxAppViewModel
+import com.google.firebase.Timestamp
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import java.util.Date
 import javax.inject.Inject
 
 @HiltViewModel
 class BoxesViewModel @Inject constructor(
     storageService: StorageService
 ) : BoxAppViewModel() {
-    // Expose the flow from service directly to the UI
-    val boxes = storageService.userBoxes
+
+    // --- STATE ---
+
+    // 1. Search Query State (Text typed by user)
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery = _searchQuery.asStateFlow()
+
+    // 2. Filter Toggle State (Unused boxes > 1 year)
+    private val _showUnusedOnly = MutableStateFlow(false)
+    val showUnusedOnly = _showUnusedOnly.asStateFlow()
+
+    // --- MAIN LOGIC ---
+
+    // 3. Combined Flow: Merges DB data + Search Query + Filter Toggle
+    // This replaces your old 'val boxes = storageService.userBoxes'
+    val boxes = combine(
+        storageService.userBoxes, // Source of truth from Firestore
+        _searchQuery,
+        _showUnusedOnly
+    ) { boxesList, query, unusedOnly ->
+
+        // Apply filters to the list
+        boxesList.filter { box ->
+
+            // A. Search Filter (Title or Description)
+            val matchesQuery = if (query.isBlank()) {
+                true
+            } else {
+                box.title.contains(query, ignoreCase = true) ||
+                        box.description.contains(query, ignoreCase = true)
+            }
+
+            // B. Unused Filter (> 1 year)
+            // If the filter is ON, we check the date. If OFF, we accept everything.
+            val matchesUnused = if (unusedOnly) {
+                isBoxUnusedForOneYear(box.lastAccess)
+            } else {
+                true
+            }
+
+            // Both conditions must be true
+            matchesQuery && matchesUnused
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    // --- UI ACTIONS ---
+
+    fun onSearchQueryChange(newQuery: String) {
+        _searchQuery.value = newQuery
+    }
+
+    fun toggleUnusedFilter() {
+        _showUnusedOnly.value = !_showUnusedOnly.value
+    }
+
+    // --- HELPER FUNCTIONS ---
+
+
+    //Checks if the timestamp is older than 365 days.
+    private fun isBoxUnusedForOneYear(date: Date?): Boolean {
+        if (date == null) return false
+
+        // 1 Year in Milliseconds (1000ms * 60s * 60m * 24h * 365d)
+        val oneYearInMillis = 365L * 24 * 60 * 60 * 1000
+
+        val now = System.currentTimeMillis()
+        val boxTime = date.time // Date.time gives milliseconds
+
+        val diff = now - boxTime
+
+        return diff > oneYearInMillis
+    }
 }
