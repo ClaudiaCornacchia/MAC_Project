@@ -1,57 +1,56 @@
 package com.example.mobile_app.screens.box.boxes
 
+
+import android.content.Context
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.util.Log
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.Card
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.mobile_app.NEW_BOX_SCREEN
-import com.example.mobile_app.model.Box
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
-import androidx.compose.material.icons.filled.QrCodeScanner
-import androidx.compose.runtime.remember
-import com.example.mobile_app.SCAN_QR_SCREEN
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.foundation.layout.offset
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlin.math.roundToInt
-import kotlinx.coroutines.launch
-import android.os.VibrationEffect
-import android.os.Build
-import android.os.Vibrator
-import android.content.Context
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.mobile_app.NEW_BOX_SCREEN
+import com.example.mobile_app.SCAN_QR_SCREEN
+import com.example.mobile_app.model.Box
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BoxesScreen(
     openScreen: (String) -> Unit,
@@ -64,199 +63,541 @@ fun BoxesScreen(
     val searchQuery by viewModel.searchQuery.collectAsState()
     val isUnusedFilterActive by viewModel.showUnusedOnly.collectAsState()
 
+    // Animation state for FAB appearance
+    var fabVisible by remember { mutableStateOf(false) }
+
+    val currentUserId = viewModel.currentUserId
+    val ownerNames = viewModel.ownerNames
+
+    LaunchedEffect(Unit) {
+        fabVisible = true
+    }
+
+    // Scan qr and add box buttons
     Scaffold(
         floatingActionButton = {
-            // We use a Column to stack buttons vertically
-            Column(
-                horizontalAlignment = Alignment.End
+            AnimatedVisibility(
+                visible = fabVisible,
+                enter = scaleIn(spring(stiffness = Spring.StiffnessLow)) + fadeIn(),
+                exit = scaleOut() + fadeOut()
             ) {
-                // 1. SCAN BUTTON (Secondary)
-                FloatingActionButton(
-                    onClick = { openScreen(SCAN_QR_SCREEN) },
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                ) {
-                    Icon(Icons.Filled.QrCodeScanner, "Scan QR")
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // 2. ADD BUTTON (Primary)
-                FloatingActionButton(
-                    onClick = { openScreen(NEW_BOX_SCREEN) },
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                ) {
-                    Icon(Icons.Filled.Add, "Add Box")
-                }
+                FloatingActionButtons(
+                    onScanClick = { openScreen(SCAN_QR_SCREEN) },
+                    onAddClick = { openScreen(NEW_BOX_SCREEN) }
+                )
             }
-        }
+        },
+        floatingActionButtonPosition = FabPosition.End
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
                 .padding(paddingValues)
         ) {
-            // SEARCH & FILTER SECTION
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                // A. Search Bar
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { viewModel.onSearchQueryChange(it) },
-                    placeholder = { Text("Search boxes...") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
-                    trailingIcon = {
-                        // Show Clear ('X') button only if there is text
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { viewModel.onSearchQueryChange("") }) {
-                                Icon(Icons.Default.Clear, contentDescription = "Clear")
-                            }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface
-                    )
-                )
+            // Header section with gradient
+            ModernHeader()
 
-                Spacer(modifier = Modifier.height(8.dp))
+            // Search and Filter section
+            SearchAndFilterSection(
+                searchQuery = searchQuery,
+                onSearchQueryChange = { viewModel.onSearchQueryChange(it) },
+                isUnusedFilterActive = isUnusedFilterActive,
+                onToggleUnusedFilter = { viewModel.toggleUnusedFilter() }
+            )
 
-                // B. Filter Chips Row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    FilterChip(
-                        selected = isUnusedFilterActive,
-                        onClick = { viewModel.toggleUnusedFilter() },
-                        label = { Text("Unused > 1 Year") },
-                        leadingIcon = if (isUnusedFilterActive) {
-                            { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
-                        } else {
-                            { Icon(Icons.Default.History, contentDescription = null, modifier = Modifier.size(18.dp)) }
-                        },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                            selectedLabelColor = MaterialTheme.colorScheme.onTertiaryContainer
-                        )
-                    )
-                }
-            }
-
-            // LIST SECTION
+            // Boxes list or empty state
             if (boxes.isEmpty()) {
-                Text(
-                    text = "No boxes yet. Add one!",
-                    modifier = Modifier.align(Alignment.CenterHorizontally).padding(16.dp)
-                )
+                EmptyState(hasActiveFilters = searchQuery.isNotEmpty() || isUnusedFilterActive)
             } else {
-                LazyColumn {
-                    items(boxes, key = { it.boxId }) { box ->
-                        BoxItem(
-                            box = box,
-                            onBoxClick = { openScreen("BoxDetailScreen/${box.boxId}") }
-                        )
-                    }
-                }
+                BoxesList(
+                    boxes = boxes,
+                    currentUserId = currentUserId,
+                    ownerNames = ownerNames,
+                    onBoxClick = { boxId -> openScreen("BoxDetailScreen/$boxId") }
+                )
             }
         }
     }
 }
 
 @Composable
-fun BoxItem(box: Box, onBoxClick: () -> Unit) {
+private fun ModernHeader() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                        MaterialTheme.colorScheme.background
+                    )
+                )
+            )
+            .padding(horizontal = 24.dp, vertical = 20.dp)
+    ) {
+        Column {
+            Text(
+                text = "My Boxes",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
 
-    // Log the info of boxes
-    Log.d("BoxItem", "Box title: ${box.title}")
-    Log.d("BoxItem", "Box description: ${box.description}")
-    Log.d("BoxItem", "Box fragile status: ${box.isFragile}")
-    Log.d("BoxItem", "Box fill status: ${box.fillStatus}")
+        }
+    }
+}
 
+@Composable
+private fun SearchAndFilterSection(
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    isUnusedFilterActive: Boolean,
+    onToggleUnusedFilter: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 3.dp)
+    ) {
+        // Modern Search Bar
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = onSearchQueryChange,
+            placeholder = {
+                Text(
+                    text = "Search by name or description...",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                )
+            },
+            leadingIcon = {
+                Icon(
+                    Icons.Default.Search,
+                    contentDescription = "Search",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            },
+            trailingIcon = {
+                if (searchQuery.isNotEmpty()) {
+                    IconButton(onClick = { onSearchQueryChange("") }) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Clear",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            shape = RoundedCornerShape(16.dp),
+            singleLine = true,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = Color.Transparent
+            )
+        )
 
+        Spacer(modifier = Modifier.height(4.dp))
 
+        // Filter Chips
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            FilterChip(
+                selected = isUnusedFilterActive,
+                onClick = onToggleUnusedFilter,
+                label = {
+                    Text(
+                        text = "Unused",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = if (isUnusedFilterActive) FontWeight.SemiBold else FontWeight.Normal
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = if (isUnusedFilterActive) Icons.Default.CheckCircle else Icons.Outlined.Schedule,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                },
+                enabled = true,
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    selectedLeadingIconColor = MaterialTheme.colorScheme.primary
+                ),
+                border = FilterChipDefaults.filterChipBorder(
+                    enabled = true,
+                    selected = isUnusedFilterActive,
+                    borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                    selectedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                    borderWidth = 1.dp
+                )
+            )
+        }
+    }
+}
 
-    // 1. ANIMATION STATE: Tracks the X offset (horizontal movement)
+@Composable
+private fun BoxesList(
+    boxes: List<Box>,
+    currentUserId: String,
+    ownerNames: Map<String, String>,
+    onBoxClick: (String) -> Unit
+) {
+
+    LazyColumn(
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 1.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        items(boxes, key = { it.boxId }) { box ->
+            val ownerName = ownerNames[box.ownerId]
+
+            ModernBoxCard(
+                box = box,
+                currentUserId = currentUserId,
+                ownerName = ownerName,
+                onClick = { onBoxClick(box.boxId) }
+            )
+        }
+
+        // Bottom spacing for FAB
+        item {
+            Spacer(modifier = Modifier.height(80.dp))
+        }
+    }
+}
+
+@Composable
+private fun ModernBoxCard(
+    box: Box,
+    currentUserId: String,
+    ownerName: String?,
+    onClick: () -> Unit
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val offsetX = remember { Animatable(0f) }
 
-    // 2. COROUTINE SCOPE: To launch the animation
-    val scope = rememberCoroutineScope()
+    val isSharedWithMe = box.ownerId != currentUserId
 
-    // 3.
-    val context = LocalContext.current
 
-    Card(
+    // Scale animation on press
+    var isPressed by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.97f else 1f,
+        animationSpec = spring(stiffness = Spring.StiffnessMedium),
+        label = "scale"
+    )
+
+    Log.d("BoxItem", "Box: ${box.title}, Fragile: ${box.isFragile}, Fill: ${box.fillStatus}")
+
+    ElevatedCard(
         modifier = Modifier
-            .padding(8.dp, 4.dp)
             .fillMaxWidth()
             .offset { IntOffset(offsetX.value.roundToInt(), 0) }
-            .clickable {
-                if (box.isFragile) {
-                    scope.launch {
-                        // A. VIBRATE (LongPress simulates a heavy/warning vibration)
-                        val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-
-                        if (vibrator.hasVibrator()) {
-                            if (Build.VERSION.SDK_INT >= 26) {
-                                vibrator.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE))
-                            } else {
-                                vibrator.vibrate(500)
+            .scale(scale)
+            .clickable(
+                onClick = {
+                    if (box.isFragile) {
+                        scope.launch {
+                            // Vibrate for fragile items
+                            val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+                            if (vibrator.hasVibrator()) {
+                                if (Build.VERSION.SDK_INT >= 26) {
+                                    vibrator.vibrate(
+                                        VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE)
+                                    )
+                                } else {
+                                    @Suppress("DEPRECATION")
+                                    vibrator.vibrate(300)
+                                }
                             }
+
+                            // Shake animation
+                            val shakeStrength = 15f
+                            val speed = spring<Float>(stiffness = Spring.StiffnessHigh)
+
+                            offsetX.animateTo(shakeStrength, animationSpec = speed)
+                            offsetX.animateTo(-shakeStrength, animationSpec = speed)
+                            offsetX.animateTo(shakeStrength / 2, animationSpec = speed)
+                            offsetX.animateTo(0f, animationSpec = speed)
+
+                            onClick()
                         }
-                        // B. ANIMATE (Shake Effect)
-                        // Move right -> left -> right -> center rapidly
-                        val shakeStrength = 20f // Pixels to move
-                        val speed = spring<Float>(stiffness = Spring.StiffnessHigh) // Fast speed
-
-                        offsetX.animateTo(shakeStrength, animationSpec = speed)
-                        offsetX.animateTo(-shakeStrength, animationSpec = speed)
-                        offsetX.animateTo(shakeStrength / 2, animationSpec = speed)
-                        offsetX.animateTo(0f, animationSpec = speed)
-
-                        // C. NAVIGATE after a tiny delay to let user see the shake
-                        onBoxClick()
+                    } else {
+                        onClick()
                     }
-                } else {
-                    // Not fragile? Just navigate immediately
-                    onBoxClick()
-                }
-            }
-
+                },
+                onClickLabel = "Open box details"
+            ),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.elevatedCardElevation(
+            defaultElevation = 2.dp,
+            pressedElevation = 8.dp
+        )
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = box.title, style = MaterialTheme.typography.titleMedium)
+            // Icon section with colored background
+            BoxIconSection(isFragile = box.isFragile, fillStatus = box.fillStatus)
 
-                // Show Human ID if available
+            Spacer(modifier = Modifier.width(4.dp))
+
+            // Content section
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                // Title
+                Text(
+                    text = box.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                // Human ID badge
                 if (box.humanId.isNotBlank()) {
-                    Text(text = "#${box.humanId}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                    ) {
+                        Text(
+                            text = "#${box.humanId}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        )
+                    }
                 }
 
-                Text(text = box.description, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                Spacer(modifier = Modifier.height(4.dp))
+
+
+                // 2. SHARED OWNER BADGE
+                if (isSharedWithMe) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+
+                            Text(
+                                text = "Owner: ${ownerName ?: "Loading..."}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.tertiary,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
             }
 
-            // Visual indicator for Fragile
-            if (box.isFragile) {
-                // Log
-                Log.d("BoxItem", "Fragile box detected: ${box.title}")
 
-                // You can also add a color tint to the warning icon
-                Icon(
-                    Icons.Filled.Warning,
-                    contentDescription = "Fragile",
-                    tint = Color.Red,
-                    modifier = Modifier.padding(start = 8.dp)
-                )
+
+            // Trailing indicators
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                // Fragile indicator
+                if (box.isFragile) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.errorContainer
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Warning,
+                            contentDescription = "Fragile",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier
+                                .padding(8.dp)
+                                .size(20.dp)
+                        )
+                    }
+                }
+
+                // Fill status indicator
+                FillStatusIndicator(fillStatus = box.fillStatus)
             }
+        }
+    }
+}
+
+
+@Composable
+private fun BoxIconSection(isFragile: Boolean, fillStatus: String) {
+    val backgroundColor by animateColorAsState(
+        targetValue = when {
+            isFragile -> MaterialTheme.colorScheme.errorContainer
+            fillStatus == "FULL" -> MaterialTheme.colorScheme.tertiaryContainer
+            else -> MaterialTheme.colorScheme.primaryContainer
+        },
+        animationSpec = tween(300),
+        label = "backgroundColor"
+    )
+
+    val iconColor by animateColorAsState(
+        targetValue = when {
+            isFragile -> MaterialTheme.colorScheme.error
+            fillStatus == "FULL" -> MaterialTheme.colorScheme.tertiary
+            else -> MaterialTheme.colorScheme.primary
+        },
+        animationSpec = tween(300),
+        label = "iconColor"
+    )
+
+    Box(
+        modifier = Modifier
+            .size(56.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(backgroundColor),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = when {
+                isFragile -> Icons.Outlined.BrokenImage
+                fillStatus == "FULL" -> Icons.Filled.Inventory2
+                else -> Icons.Outlined.Inventory2
+            },
+            contentDescription = null,
+            tint = iconColor,
+            modifier = Modifier.size(28.dp)
+        )
+    }
+}
+
+@Composable
+private fun FillStatusIndicator(fillStatus: String) {
+    val (text, color) = when (fillStatus.uppercase()) {
+        "RED" -> "Full" to Color(0xFFE53935)
+        "YELLOW" -> "Half" to Color(0xFFFFC107)
+        "GREEN" -> "Empty" to Color(0xFF43A047)
+        else -> "N/A" to Color.Gray
+    }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.Medium
+        )
+
+        Box(
+            modifier = Modifier
+                .size(12.dp)
+                .background(color = color, shape = CircleShape)
+
+        )
+    }
+}
+
+@Composable
+private fun EmptyState(hasActiveFilters: Boolean) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        // Animated icon
+        Icon(
+            imageVector = if (hasActiveFilters) Icons.Outlined.SearchOff else Icons.Outlined.Inventory2,
+            contentDescription = null,
+            modifier = Modifier.size(120.dp),
+            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = if (hasActiveFilters) "No boxes found" else "No boxes yet",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = if (hasActiveFilters)
+                "Try adjusting your search or filters"
+            else
+                "Create your first box to get started!",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+        )
+    }
+}
+
+@Composable
+private fun FloatingActionButtons(
+    onScanClick: () -> Unit,
+    onAddClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.End,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Scan QR FAB
+        SmallFloatingActionButton(
+            onClick = onScanClick,
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            elevation = FloatingActionButtonDefaults.elevation(
+                defaultElevation = 4.dp,
+                pressedElevation = 8.dp
+            )
+        ) {
+            Icon(
+                Icons.Filled.QrCodeScanner,
+                contentDescription = "Scan QR Code",
+                modifier = Modifier.size(24.dp)
+            )
+        }
+
+        // Add Box FAB
+        FloatingActionButton(
+            onClick = onAddClick,
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            elevation = FloatingActionButtonDefaults.elevation(
+                defaultElevation = 6.dp,
+                pressedElevation = 12.dp
+            )
+        ) {
+            Icon(
+                Icons.Filled.Add,
+                contentDescription = "Add Box",
+                modifier = Modifier.size(28.dp)
+            )
         }
     }
 }

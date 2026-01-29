@@ -1,6 +1,8 @@
 package com.example.mobile_app.screens.box.boxes
 
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.lifecycle.viewModelScope
+import com.example.mobile_app.model.Box
 import com.example.mobile_app.model.service.StorageService
 import com.example.mobile_app.screens.BoxAppViewModel
 import com.google.firebase.Timestamp
@@ -12,13 +14,19 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import java.util.Date
 import javax.inject.Inject
+import com.example.mobile_app.model.service.AccountService
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 
 @HiltViewModel
 class BoxesViewModel @Inject constructor(
-    storageService: StorageService
+    storageService: StorageService,
+    private val accountService: AccountService
 ) : BoxAppViewModel() {
 
-    // --- STATE ---
+    val currentUserId: String
+        get() = accountService.currentUserId
+
 
     // 1. Search Query State (Text typed by user)
     private val _searchQuery = MutableStateFlow("")
@@ -28,7 +36,8 @@ class BoxesViewModel @Inject constructor(
     private val _showUnusedOnly = MutableStateFlow(false)
     val showUnusedOnly = _showUnusedOnly.asStateFlow()
 
-    // --- MAIN LOGIC ---
+    var ownerNames = mutableStateMapOf<String, String>()
+        private set
 
     // 3. Combined Flow: Merges DB data + Search Query + Filter Toggle
     // This replaces your old 'val boxes = storageService.userBoxes'
@@ -39,7 +48,7 @@ class BoxesViewModel @Inject constructor(
     ) { boxesList, query, unusedOnly ->
 
         // Apply filters to the list
-        boxesList.filter { box ->
+        val filteredBoxes = boxesList.filter { box ->
 
             // A. Search Filter (Title or Description)
             val matchesQuery = if (query.isBlank()) {
@@ -60,14 +69,39 @@ class BoxesViewModel @Inject constructor(
             // Both conditions must be true
             matchesQuery && matchesUnused
         }
+
+        loadOwnerNames(filteredBoxes)
+
+        filteredBoxes
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
 
-    // --- UI ACTIONS ---
+    private fun loadOwnerNames(boxes: List<Box>) {
+        launchCatching {
+            val idsToLoad = boxes
+                .filter { it.ownerId != currentUserId && !ownerNames.containsKey(it.ownerId) }
+                .map { it.ownerId }
+                .distinct()
 
+            if (idsToLoad.isNotEmpty()) {
+
+                val newNames = idsToLoad
+                    .map { id ->
+                        async { id to accountService.getUserName(id) }
+                    }
+                    .awaitAll()
+                    .toMap()
+
+
+                ownerNames.putAll(newNames)
+            }
+        }
+    }
+
+    // UI ACTIONS
     fun onSearchQueryChange(newQuery: String) {
         _searchQuery.value = newQuery
     }
@@ -76,8 +110,7 @@ class BoxesViewModel @Inject constructor(
         _showUnusedOnly.value = !_showUnusedOnly.value
     }
 
-    // --- HELPER FUNCTIONS ---
-
+    // HELPER FUNCTIONS
 
     //Checks if the timestamp is older than 365 days.
     private fun isBoxUnusedForOneYear(date: Date?): Boolean {

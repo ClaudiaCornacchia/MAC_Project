@@ -72,9 +72,12 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.maps.android.compose.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.runtime.key
+import com.example.mobile_app.BOXES_SCREEN
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -122,8 +125,10 @@ fun BoxDetailScreen(
         if (isGranted) viewModel.updateLocation()
     }
 
-    // PHOTO
+    // Delete dialog
+    val showDeleteDialog = viewModel.showDeleteDialog
 
+    // PHOTO
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri -> if (uri != null) viewModel.updateDraftPhoto(uri) }
@@ -136,6 +141,7 @@ fun BoxDetailScreen(
             viewModel.updateDraftPhoto(viewModel.tempPhotoUri!!)
         }
     }
+
 
     // Temporary URI
     fun launchCamera() {
@@ -185,6 +191,34 @@ fun BoxDetailScreen(
         }
     }
 
+    // delete dialog
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.onDeleteCancel() },
+            title = { Text(text = "Delete Box") },
+            text = {
+                Text("Are you sure you want to delete this box? This action cannot be undone.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        // Perform delete and navigate back upon success
+                        viewModel.deleteBox { openScreen(BOXES_SCREEN)}
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.onDeleteCancel() }) {
+                    Text("Cancel")
+                }
+            },
+            icon = { Icon(Icons.Default.DeleteForever, contentDescription = null) }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -213,8 +247,19 @@ fun BoxDetailScreen(
                     } else {
 
                         if (box != null) {
+
+                            // 1. EDIT BUTTON (Visible only when NOT editing)
                             IconButton(onClick = { viewModel.startEditing() }) {
                                 Icon(Icons.Default.Edit, contentDescription = "Edit")
+                            }
+
+                            // 2. DELETE BUTTON (Visible only when NOT editing)
+                            IconButton(onClick = { viewModel.onDeleteClick() }) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "Delete Box",
+                                    tint = MaterialTheme.colorScheme.error // Red tint for destructive action
+                                )
                             }
                         }
                     }

@@ -59,6 +59,10 @@ class BoxDetailViewModel @Inject constructor(
     var locationPredictions by mutableStateOf<List<AutocompleteResult>>(emptyList())
         private set
 
+    // Delete box
+    var showDeleteDialog by mutableStateOf(false)
+        private set
+
     private var searchJob: Job? = null
 
 
@@ -295,6 +299,30 @@ class BoxDetailViewModel @Inject constructor(
 
     fun clearLocationSuggestions() {
         locationPredictions = emptyList()
+    }
+
+    // DELETE BOX
+    // Called when the user clicks the trash icon
+    fun onDeleteClick() {
+        showDeleteDialog = true
+    }
+
+    // Called when the user clicks "Cancel" in the dialog
+    fun onDeleteCancel() {
+        showDeleteDialog = false
+    }
+
+    // Called when the user confirms deletion
+    fun deleteBox(onSuccess: () -> Unit) {
+        launchCatching {
+            isLoading = true
+            // Delete image, QR, and Firestore document
+            storageService.deleteBox(boxId, box.ownerId)
+            isLoading = false
+
+            // Navigate back to the previous screen
+            onSuccess()
+        }
     }
 
 

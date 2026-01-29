@@ -18,10 +18,13 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import com.example.mobile_app.model.User
+import com.google.firebase.Firebase
 import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.flow.map
 import com.google.firebase.firestore.snapshots
 import com.google.firebase.storage.FirebaseStorage
+import com.google.firebase.storage.storage
 import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.async
 import kotlinx.coroutines.CoroutineScope
@@ -153,24 +156,19 @@ class StorageService @Inject constructor(
     ) {
         val userId = accountService.currentUserId
 
-        // 1. STEP VELOCE: Aggiorna subito i testi e metti lo stato "UPLOADING"
+        // 1. update text image url to uploading
         if (newImageUri != null) {
             updates["imageUrl"] = "UPLOADING"
         }
         updates["lastEdited"] = com.google.firebase.Timestamp.now()
 
-        // Questo avviene in frazioni di secondo: l'utente vede subito le modifiche ai testi
         firestore.collection("boxes").document(boxId).update(updates).await()
 
-        // 2. STEP LENTO (BACKGROUND): Se c'è una foto, caricala con calma
+        // 2. Background image loading
         if (newImageUri != null) {
-            // Usa lo scope globale dell'app (come facevi in saveBox)
-            // Nota: se non hai 'applicationScope' nel service, usa 'CoroutineScope(Dispatchers.IO).launch'
-            // ma l'ideale è iniettarlo con Hilt. Usiamo la logica del tuo saveBox:
-
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
                 try {
-                    // A. Comprimi e Carica
+                    // Compress image
                     val compressedData = getCompressedImage(newImageUri)
 
                     if (compressedData != null) {
@@ -179,14 +177,13 @@ class StorageService @Inject constructor(
 
                         val finalImageUrl = storageRef.downloadUrl.await().toString()
 
-                        // B. Aggiorna Firestore con l'URL vero
+                        // Update firestore with the real url
                         firestore.collection("boxes").document(boxId).update("imageUrl", finalImageUrl).await()
 
                         android.util.Log.d("UPDATE_BG", "Foto aggiornata in background!")
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    // Se fallisce, rimetti vuoto o gestisci l'errore
                     // firestore.collection("boxes").document(boxId).update("imageUrl", "").await()
                 }
             }
@@ -216,7 +213,7 @@ class StorageService @Inject constructor(
             .await()
 
         if (usersQuery.isEmpty) {
-            throw Exception("User not found with this email.")
+            throw Exception("Invalid email")
         }
 
         // 2. Get the ID of the found user
@@ -230,11 +227,34 @@ class StorageService @Inject constructor(
             .await()
     }
 
-    //Update last access
+    // 6. Update last access
     suspend fun updateLastAccess(boxId: String) {
         val updates = mapOf("lastAccess" to com.google.firebase.Timestamp.now())
         firestore.collection("boxes").document(boxId).update(updates).await()
     }
+
+    // 7. Delete box
+    suspend fun deleteBox(boxId: String, ownerId: String) {
+        // 1. Delete the Box Image from Storage (if it exists)
+        try {
+            Firebase.storage.reference.child("box_images/$ownerId/$boxId.jpg").delete().await()
+        } catch (e: Exception) {
+            // Ignore error if the image does not exist
+        }
+
+        // 2. Delete the QR Code from Storage (if it exists)
+        try {
+            Firebase.storage.reference.child("qrcodes/$boxId.png").delete().await()
+        } catch (e: Exception) {
+            // Ignore error if the QR does not exist
+        }
+
+        // 3. Delete the document from Firestore Database
+        Firebase.firestore.collection("boxes").document(boxId).delete().await()
+    }
+
+
+
 
     // Compress the image
     private fun getCompressedImage(uri: Uri): ByteArray? {
