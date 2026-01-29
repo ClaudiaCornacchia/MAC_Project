@@ -70,7 +70,10 @@ import kotlinx.coroutines.delay
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class) // Opt-in required because some Material3 APIs (like Scaffold) might still be experimental
@@ -200,29 +203,14 @@ fun rememberAppState(
 
 @Composable
 fun BoxlyLogo(modifier: Modifier = Modifier) {
-    // Modern, minimalist box icon with gradient
-    val gradient = Brush.linearGradient(
-        colors = listOf(
-            MaterialTheme.colorScheme.primary,
-            MaterialTheme.colorScheme.tertiary
-        )
-    )
 
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(gradient),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = Icons.Filled.Inventory2,
-            contentDescription = "Boxly Logo",
-            tint = Color.White,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(6.dp)
+        Image(
+            painter = painterResource(id = R.drawable.boxly_logo),
+            contentDescription = "Boxly App Logo",
+            contentScale = ContentScale.Fit,
+            modifier = modifier
         )
-    }
+
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -262,10 +250,15 @@ fun BoxTopAppBar(
                     // Boxly branding with logo
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxHeight()
                     ) {
                         // App Logo
-                        BoxlyLogo(modifier = Modifier.size(32.dp))
+                        BoxlyLogo(
+                            modifier = Modifier
+                            .fillMaxHeight()
+                            .padding(vertical = 4.dp)
+                        )
 
                         // App Name
                         Text(
