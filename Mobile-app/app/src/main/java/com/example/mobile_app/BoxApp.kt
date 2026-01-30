@@ -352,7 +352,7 @@ private fun ProfileButton(onClick: () -> Unit) {
 
     Box(
         modifier = Modifier
-            .size(42.dp)
+            .size(36.dp)
             .scale(scale)
             .clip(CircleShape)
             .background(
