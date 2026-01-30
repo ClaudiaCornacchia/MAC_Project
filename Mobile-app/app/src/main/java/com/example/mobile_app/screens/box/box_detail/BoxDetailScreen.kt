@@ -625,7 +625,8 @@ private fun BoxStatusSection(
                             containerColor = MaterialTheme.colorScheme.errorContainer,
                             labelColor = MaterialTheme.colorScheme.error,
                             iconContentColor = MaterialTheme.colorScheme.error
-                        )
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
                     )
                 }
 
@@ -1037,48 +1038,48 @@ private fun EmptyImagePlaceholder() {
     }
 }
 
-// Dialogs
-@Composable
-private fun ModernDeleteDialog(
-    onDismiss: () -> Unit,
-    onConfirm: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = {
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.errorContainer
-            ) {
-                Icon(
-                    Icons.Default.DeleteForever,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(12.dp).size(32.dp)
-                )
-            }
-        },
-        title = { Text("Delete Box?", fontWeight = FontWeight.Bold) },
-        text = { Text("This action cannot be undone. The box and all its data will be permanently deleted.") },
-        confirmButton = {
-            Button(
-                onClick = onConfirm,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error
-                ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text("Delete")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        },
-        shape = RoundedCornerShape(24.dp)
-    )
-}
+//// Dialogs
+//@Composable
+//private fun ModernDeleteDialog(
+//    onDismiss: () -> Unit,
+//    onConfirm: () -> Unit
+//) {
+//    AlertDialog(
+//        onDismissRequest = onDismiss,
+//        icon = {
+//            Surface(
+//                shape = CircleShape,
+//                color = MaterialTheme.colorScheme.errorContainer
+//            ) {
+//                Icon(
+//                    Icons.Default.DeleteForever,
+//                    contentDescription = null,
+//                    tint = MaterialTheme.colorScheme.error,
+//                    modifier = Modifier.padding(12.dp).size(32.dp)
+//                )
+//            }
+//        },
+//        title = { Text("Delete Box?", fontWeight = FontWeight.Bold) },
+//        text = { Text("This action cannot be undone. The box and all its data will be permanently deleted.") },
+//        confirmButton = {
+//            Button(
+//                onClick = onConfirm,
+//                colors = ButtonDefaults.buttonColors(
+//                    containerColor = MaterialTheme.colorScheme.error
+//                ),
+//                shape = RoundedCornerShape(12.dp)
+//            ) {
+//                Text("Delete")
+//            }
+//        },
+//        dismissButton = {
+//            TextButton(onClick = onDismiss) {
+//                Text("Cancel")
+//            }
+//        },
+//        shape = RoundedCornerShape(24.dp)
+//    )
+//}
 
 @Composable
 private fun ModernShareDialog(

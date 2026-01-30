@@ -26,24 +26,7 @@ import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.LocationOn
 
 // Compose Material 3 Components
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.MenuAnchorType
-
+import androidx.compose.material3.*
 // Compose Runtime
 import androidx.compose.runtime.Composable
 
@@ -63,19 +46,29 @@ import com.example.mobile_app.SnackbarManager
 
 
 import androidx.activity.result.PickVisualMediaRequest
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import coil.compose.AsyncImage
-
+import kotlinx.coroutines.launch
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.Brush
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -85,6 +78,7 @@ fun NewBoxScreen(
 ) {
     val uiState = viewModel.uiState
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     // State to control if the dropdown Google Places is expanded (visible)
     // It should be expanded if we have predictions and the user is typing
@@ -178,317 +172,413 @@ fun NewBoxScreen(
     var showSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
 
-
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text("Create New Box", style = MaterialTheme.typography.headlineSmall)
-        Spacer(Modifier.height(16.dp))
-
-        // 1. Title
-        OutlinedTextField(
-            value = uiState.title,
-            onValueChange = { viewModel.onTitleChange(it) },
-            label = { Text("Title") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        // 2. Description
-        OutlinedTextField(
-            value = uiState.description,
-            onValueChange = { viewModel.onDescriptionChange(it) },
-            label = { Text("Description") },
-            modifier = Modifier.fillMaxWidth(),
-            // Add the Microphone Icon here
-            trailingIcon = {
-                IconButton(onClick = {
-                    // Check for permission before starting
-                    recordAudioLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                }) {
-                    Icon(
-                        imageVector = Icons.Filled.Mic,
-                        contentDescription = "Speech to Text",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-        )
-
-        // 3. Secret Note (Optional)
-        OutlinedTextField(
-            value = uiState.secretNote,
-            onValueChange = { viewModel.onSecretNoteChange(it) },
-            label = { Text("Secret Note (Optional)") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(Modifier.height(16.dp))
-
-        // 4. PHOTO
-        Box(
+// UI CONTENT
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        contentWindowInsets = WindowInsets(0) // Allows header to go behind status bar
+    ) { paddingValues ->
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(220.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .clickable { showSheet = true }, // selector gallery or camera
-            contentAlignment = Alignment.Center
+                .fillMaxSize()
+                .padding(paddingValues)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (uiState.selectedImageUri != null) {
-                // if we have a selected image, show it
-                AsyncImage(
-                    model = uiState.selectedImageUri,
-                    contentDescription = "Selected Box Image",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
+            // 1. MODERN HEADER
+            ModernCreateHeader()
 
-
-                Surface(
-                    color = Color.Black.copy(alpha = 0.5f),
-                    modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp),
-                    shape = RoundedCornerShape(8.dp)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // 2. MAIN CARD
+                ElevatedCard(
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.elevatedCardElevation(2.dp)
                 ) {
-                    Text(
-                        "Tap to change",
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        style = MaterialTheme.typography.labelSmall
-                    )
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        // TEXT FIELDS
+
+                        ModernTextField(
+                            value = uiState.title,
+                            onValueChange = { viewModel.onTitleChange(it) },
+                            label = "Title"
+                        )
+
+                        ModernTextField(
+                            value = uiState.description,
+                            onValueChange = { viewModel.onDescriptionChange(it) },
+                            label = "Description",
+                            singleLine = false,
+                            trailingIcon = {
+                                IconButton(onClick = { recordAudioLauncher.launch(Manifest.permission.RECORD_AUDIO) }) {
+                                    Icon(Icons.Filled.Mic, "Speech to Text", tint = MaterialTheme.colorScheme.primary)
+                                }
+                            }
+                        )
+
+                        Spacer(modifier = Modifier.height(2.dp))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                        Spacer(modifier = Modifier.height(2.dp))
+
+                        // 2. IMAGE
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(220.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                .clickable { showSheet = true },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (uiState.selectedImageUri != null) {
+                                AsyncImage(
+                                    model = uiState.selectedImageUri,
+                                    contentDescription = "Selected Box Image",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                                // Edit Overlay
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Color.Black.copy(alpha = 0.3f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.Edit, null, tint = Color.White)
+                                }
+                            } else {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(Icons.Default.AddAPhoto, null, modifier = Modifier.size(40.dp), tint = MaterialTheme.colorScheme.primary)
+                                    Spacer(Modifier.height(8.dp))
+                                    Text("Tap to add photo", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                                }
+                            }
+                        }
+                    }
                 }
-            } else {
-                // if we don't have a selected image, show a placeholder
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.Default.AddAPhoto,
-                        contentDescription = null,
-                        tint = Color.Gray,
-                        modifier = Modifier.size(48.dp)
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text("Add a photo", color = Color.Gray)
+
+                // 4. LOCATION CARD
+                ElevatedCard(
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.elevatedCardElevation(2.dp)
+                ) {
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        SectionHeader(icon = Icons.Default.LocationOn, title = "Location")
+                        Spacer(Modifier.height(16.dp))
+
+                        ExposedDropdownMenuBox(
+                            expanded = isDropdownExpanded,
+                            onExpandedChange = { /* handled by input logic */ }
+                        ) {
+                            ModernTextField(
+                                value = uiState.locationAddress,
+                                onValueChange = { viewModel.onLocationQueryChange(it) },
+                                label = "Address",
+                                placeholder = "Start typing street name...",
+                                modifier = Modifier.menuAnchor(),
+                                trailingIcon = {
+                                    Row {
+                                        if (uiState.locationAddress.isNotBlank()) {
+                                            IconButton(onClick = { viewModel.onLocationQueryChange("") }) {
+                                                Icon(Icons.Default.Clear, "Clear", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            }
+                                        }
+                                        IconButton(onClick = { locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION) }) {
+                                            Icon(Icons.Filled.LocationOn, "Use GPS", tint = MaterialTheme.colorScheme.primary)
+                                        }
+                                    }
+                                }
+                            )
+
+                            ExposedDropdownMenu(
+                                expanded = isDropdownExpanded,
+                                onDismissRequest = { /* Optional */ },
+                                modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                            ) {
+                                viewModel.locationPredictions.forEach { prediction ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Column {
+                                                Text(prediction.primaryText, style = MaterialTheme.typography.bodyLarge)
+                                                Text(prediction.secondaryText, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            }
+                                        },
+                                        onClick = { viewModel.onLocationPredictionSelected(prediction) },
+                                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                                    )
+                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                                }
+                            }
+                        }
+                    }
                 }
+
+                // 5. STATUS CARD
+                ElevatedCard(
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.elevatedCardElevation(2.dp)
+                ) {
+                    Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                        SectionHeader(icon = Icons.Default.Info, title = "Status")
+
+                        // Fragile
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Surface(
+                                    shape = CircleShape, color = MaterialTheme.colorScheme.errorContainer.copy(0.3f),
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                                    }
+                                }
+                                Spacer(Modifier.width(12.dp))
+                                Text("Fragile Item", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                            }
+                            Switch(
+                                checked = uiState.isFragile,
+                                onCheckedChange = { viewModel.onFragileChange(it) }
+                            )
+                        }
+
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+
+                        // Fill Status
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text("Fill Level", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                StatusChip(
+                                    text = "Empty", color = Color(0xFF43A047),
+                                    isSelected = uiState.fillStatus == "GREEN",
+                                    onClick = { viewModel.onFillStatusChange("GREEN") },
+                                    modifier = Modifier.weight(1f)
+                                )
+                                StatusChip(
+                                    text = "Half", color = Color(0xFFFFC107),
+                                    isSelected = uiState.fillStatus == "YELLOW",
+                                    onClick = { viewModel.onFillStatusChange("YELLOW") },
+                                    modifier = Modifier.weight(1f)
+                                )
+                                StatusChip(
+                                    text = "Full", color = Color(0xFFE53935),
+                                    isSelected = uiState.fillStatus == "RED",
+                                    onClick = { viewModel.onFillStatusChange("RED") },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+
+                // SAVE BUTTON
+                Button(
+                    onClick = { viewModel.onDoneClick(popUpScreen) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+
+                    elevation = ButtonDefaults.buttonElevation(
+                        defaultElevation = 8.dp,
+                        pressedElevation = 12.dp,
+                        disabledElevation = 0.dp
+                    ),
+                    enabled = uiState.title.isNotBlank() &&
+                            uiState.description.isNotBlank() &&
+                            (uiState.locationAddress.isBlank() || uiState.location != null),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Text("Save Box", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.width(8.dp))
+                    Icon(Icons.Default.Check, contentDescription = null)
+                }
+
+                Spacer(Modifier.height(10.dp))
             }
         }
 
-        Spacer(Modifier.height(16.dp))
+        //  BOTTOM SHEETS
 
-        // selector gallery or camera
+        // Photo Picker Sheet
         if (showSheet) {
             ModalBottomSheet(
                 onDismissRequest = { showSheet = false },
                 sheetState = sheetState,
-                dragHandle = { BottomSheetDefaults.DragHandle() }
+                containerColor = MaterialTheme.colorScheme.surface
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 40.dp, top = 8.dp, start = 16.dp, end = 16.dp)
                 ) {
-                    Text(
-                        text = "Select Photo",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
+                    Text("Select Photo", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 16.dp))
 
                     ListItem(
                         headlineContent = { Text("Take a photo") },
-                        leadingContent = { Icon(Icons.Default.CameraAlt, contentDescription = null) },
-                        modifier = Modifier.clickable {
-                            showSheet = false
-                            cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
+                        leadingContent = { Icon(Icons.Default.CameraAlt, null, tint = MaterialTheme.colorScheme.primary) },
+                        modifier = Modifier.clip(RoundedCornerShape(12.dp)).clickable {
+                            scope.launch { sheetState.hide() }.invokeOnCompletion {
+                                showSheet = false; cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                            }
                         }
                     )
-
-                    // Option gallery
                     ListItem(
                         headlineContent = { Text("Choose from Gallery") },
-                        leadingContent = { Icon(Icons.Default.Image, contentDescription = null) },
-                        modifier = Modifier.clickable {
-                            showSheet = false
-                            galleryLauncher.launch(
-                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                            )
+                        leadingContent = { Icon(Icons.Default.Image, null, tint = MaterialTheme.colorScheme.primary) },
+                        modifier = Modifier.clip(RoundedCornerShape(12.dp)).clickable {
+                            scope.launch { sheetState.hide() }.invokeOnCompletion {
+                                showSheet = false; galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                            }
                         }
                     )
                 }
             }
         }
 
-        Spacer(Modifier.height(16.dp))
-
-        // 4. Location
-        ExposedDropdownMenuBox(
-            expanded = isDropdownExpanded,
-            onExpandedChange = { /* handled by input logic */ }
-        ) {
-            // The Input Field
-            OutlinedTextField(
-                value = uiState.locationAddress,
-                onValueChange = { viewModel.onLocationQueryChange(it) },
-                label = { Text("Location Address") },
-                placeholder = { Text("Start typing street name...") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor(
-                        type = MenuAnchorType.PrimaryEditable,
-                        enabled = true
-                    ),
-                trailingIcon = {
-                    Row {
-                        // Clear button
-                        if (uiState.locationAddress.isNotBlank()) {
-                            IconButton(onClick = {
-                                // Resetta testo e coordinate
-                                viewModel.onLocationQueryChange("")
-                            }) {
-                                Icon(
-                                    imageVector = Icons.Default.Clear,
-                                    contentDescription = "Clear",
-                                    tint = Color.Gray
-                                )
-                            }
-                        }
-                        // GPS button!
-                        IconButton(onClick = {
-                            locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-                        }) {
-                            Icon(
-                                imageVector = Icons.Filled.LocationOn,
-                                contentDescription = "Use GPS",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-                },
-                singleLine = true
-            )
-
-            // The Suggestions List
-            ExposedDropdownMenu(
-                expanded = isDropdownExpanded,
-                onDismissRequest = { /* Optional: clear list on dismiss */ }
+        // Listening Sheet (Overlay)
+        if (viewModel.isListeningModeActive) {
+            ModalBottomSheet(
+                onDismissRequest = { viewModel.stopAndSaveRecording() },
+                sheetState = rememberModalBottomSheetState(),
+                containerColor = MaterialTheme.colorScheme.surface
             ) {
-                viewModel.locationPredictions.forEach { prediction ->
-                    DropdownMenuItem(
-                        text = {
-                            Column {
-                                Text(prediction.primaryText, style = MaterialTheme.typography.bodyLarge)
-                                Text(prediction.secondaryText, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                            }
-                        },
-                        onClick = {
-                            viewModel.onLocationPredictionSelected(prediction)
-                        }
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("Listening...", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.height(16.dp))
+
+                    // The Visualizer (Assumption: AudioVisualizer is a custom component you have)
+                    AudioVisualizer(loudness = viewModel.currentLoudness)
+
+                    Spacer(Modifier.height(16.dp))
+
+                    Text(
+                        text = viewModel.popupDisplayText.ifEmpty { "Say something..." },
+                        style = MaterialTheme.typography.headlineSmall,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
                     )
+                    Spacer(Modifier.height(32.dp))
+
+                    Button(
+                        onClick = { viewModel.stopAndSaveRecording() },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                        modifier = Modifier.fillMaxWidth().height(50.dp)
+                    ) {
+                        Text("Stop & Add Text")
+                    }
+                    TextButton(onClick = { viewModel.stopRecordingAndDismiss() }) {
+                        Text("Cancel")
+                    }
+                    Spacer(Modifier.height(24.dp))
                 }
             }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        // 5. Fragile Switch
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Is Fragile?")
-            Spacer(Modifier.weight(1f))
-            Switch(
-                checked = uiState.isFragile,
-                onCheckedChange = { viewModel.onFragileChange(it) }
-            )
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        // 6. Fill Status Selection
-        Text("Fill Status", style = MaterialTheme.typography.labelLarge)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            FilterChip(
-                selected = uiState.fillStatus == "GREEN",
-                onClick = { viewModel.onFillStatusChange("GREEN") },
-                label = { Text("Empty") }
-            )
-            FilterChip(
-                selected = uiState.fillStatus == "YELLOW",
-                onClick = { viewModel.onFillStatusChange("YELLOW") },
-                label = { Text("Half") }
-            )
-            FilterChip(
-                selected = uiState.fillStatus == "RED",
-                onClick = { viewModel.onFillStatusChange("RED") },
-                label = { Text("Full") }
-            )
-        }
-
-        Spacer(Modifier.height(32.dp))
-
-        Button(
-            onClick = { viewModel.onDoneClick(popUpScreen) },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = uiState.title.isNotBlank() &&
-                    uiState.description.isNotBlank() &&
-                    (uiState.locationAddress.isBlank() || uiState.location != null)
-        ) {
-            Text("Save Box")
         }
     }
+}
 
-    // 3. LISTENING SHEET (OVERLAY)
-    // This sits outside the Column but inside the Composable function.
-    // It appears on top of the UI when viewModel.isListening is true.
-    // --- LISTENING SHEET ---
-    if (viewModel.isListeningModeActive) {
-        ModalBottomSheet(
-            onDismissRequest = { viewModel.stopAndSaveRecording() },
-            sheetState = rememberModalBottomSheetState()
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text("Listening...", style = MaterialTheme.typography.titleLarge)
+// HELPER COMPONENTS
 
-                Spacer(Modifier.height(16.dp))
-
-                // The Visualizer with spikes (using loudness from VM)
-                AudioVisualizer(loudness = viewModel.currentLoudness)
-
-                Spacer(Modifier.height(16.dp))
-
-                // Show what has been recognized so far in this session
-                // We use 'popupDisplayText' here, NOT the main description
-                Text(
-                    text = viewModel.popupDisplayText.ifEmpty { "Say something..." },
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontStyle = FontStyle.Italic,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
+@Composable
+private fun ModernCreateHeader() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                        MaterialTheme.colorScheme.background
+                    )
                 )
+            )
+            .padding(horizontal = 24.dp, vertical = 15.dp)
+    ) {
+        Column {
+            Text(
+                text = "New Box",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+        }
+    }
+}
 
-                Spacer(Modifier.height(24.dp))
+@Composable
+private fun SectionHeader(icon: ImageVector, title: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null, tint = MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.width(8.dp))
+        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+    }
+}
 
-                // Stop & Save Button
-                Button(
-                    onClick = { viewModel.stopAndSaveRecording() },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                ) {
-                    Text("Stop & Append Text")
-                }
+@Composable
+private fun ModernTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    placeholder: String? = null,
+    singleLine: Boolean = true,
+    trailingIcon: @Composable (() -> Unit)? = null
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        placeholder = if (placeholder != null) { { Text(placeholder) } } else null,
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        singleLine = singleLine,
+        trailingIcon = trailingIcon,
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = Color.Transparent
+        )
+    )
+}
 
-                // Cancel Button (Optional)
-                TextButton(onClick = { viewModel.stopRecordingAndDismiss() }) {
-                    Text("Cancel")
-                }
+@Composable
+private fun StatusChip(
+    text: String, color: Color, isSelected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier
+) {
+    val backgroundColor = if (isSelected) color.copy(alpha = 0.15f) else Color.Transparent
+    val borderColor = if (isSelected) color else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+    val textColor = if (isSelected) color else MaterialTheme.colorScheme.onSurfaceVariant
 
-                // Add some padding at the bottom for navigation bar
-                Spacer(Modifier.height(48.dp))
-            }
+    Surface(
+        onClick = onClick,
+        modifier = modifier.height(40.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = backgroundColor,
+        border = BorderStroke(1.dp, borderColor)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(text, style = MaterialTheme.typography.labelLarge, color = textColor, fontWeight = FontWeight.SemiBold)
         }
     }
 }

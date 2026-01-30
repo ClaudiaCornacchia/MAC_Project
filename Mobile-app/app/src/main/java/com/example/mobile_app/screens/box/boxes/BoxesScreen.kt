@@ -138,7 +138,7 @@ private fun ModernHeader() {
                     )
                 )
             )
-            .padding(horizontal = 24.dp, vertical = 10.dp)
+            .padding(horizontal = 24.dp, vertical = 15.dp)
     ) {
         Column {
             Text(
