@@ -196,7 +196,7 @@ private fun SearchAndFilterSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
-            shape = RoundedCornerShape(16.dp),
+            shape = CircleShape,
             singleLine = true,
             colors = OutlinedTextFieldDefaults.colors(
                 focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -216,6 +216,7 @@ private fun SearchAndFilterSection(
             FilterChip(
                 selected = isUnusedFilterActive,
                 onClick = onToggleUnusedFilter,
+                shape = CircleShape,
                 label = {
                     Text(
                         text = "Unused",
