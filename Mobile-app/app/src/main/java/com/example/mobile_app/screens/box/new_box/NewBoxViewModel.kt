@@ -6,6 +6,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.example.mobile_app.BOX_DETAIL_SCREEN
 import com.example.mobile_app.R
 import com.example.mobile_app.SnackbarManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,6 +21,8 @@ import com.google.firebase.firestore.GeoPoint
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import com.example.mobile_app.model.service.AutocompleteResult
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 @HiltViewModel
 class NewBoxViewModel @Inject constructor(
@@ -227,9 +230,11 @@ class NewBoxViewModel @Inject constructor(
     }
 
     // 3. SAVE BOX
-    fun onDoneClick(popUpScreen: () -> Unit) {
+    fun onDoneClick(navigate: (String) -> Unit) {
         launchCatching {
+            val newId = storageService.getNewBoxId()
             val newBox = Box(
+                boxId = newId,
                 title = uiState.title,
                 description = uiState.description,
                 isFragile = uiState.isFragile,
@@ -240,7 +245,19 @@ class NewBoxViewModel @Inject constructor(
 
             )
             storageService.saveBox(newBox, uiState.selectedImageUri)
-            popUpScreen() // Go back to list
+            val targetRoute = if (uiState.selectedImageUri != null) {
+                // Codifichiamo l'URI per non rompere la navigazione
+                val encodedUri = URLEncoder.encode(
+                    uiState.selectedImageUri.toString(),
+                    StandardCharsets.UTF_8.toString()
+                )
+                "BoxDetailScreen/$newId?localUri=$encodedUri"
+            } else {
+                "BoxDetailScreen/$newId"
+            }
+
+            // 5. Andiamo!
+            navigate(targetRoute)
         }
     }
 

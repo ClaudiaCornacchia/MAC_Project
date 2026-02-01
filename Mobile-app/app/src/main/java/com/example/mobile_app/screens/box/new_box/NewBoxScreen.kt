@@ -73,7 +73,7 @@ import androidx.compose.ui.graphics.Brush
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewBoxScreen(
-    popUpScreen: () -> Unit,
+    navigate: (String) -> Unit,
     viewModel: NewBoxViewModel = hiltViewModel()
 ) {
     val uiState = viewModel.uiState
@@ -388,7 +388,11 @@ fun NewBoxScreen(
 
                 // SAVE BUTTON
                 Button(
-                    onClick = { viewModel.onDoneClick(popUpScreen) },
+                    onClick = {
+                        viewModel.onDoneClick { route ->
+                            navigate(route) // Passiamo la rotta ricevuta dal ViewModel
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),

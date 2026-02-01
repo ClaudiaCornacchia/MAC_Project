@@ -2,6 +2,7 @@ package com.example.mobile_app.screens.box.box_detail
 
 import android.Manifest
 import android.content.Context
+import android.net.Uri
 import android.os.Build
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -54,11 +55,14 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BoxDetailScreen(
     boxId: String,
+    localUri: String?,
     openScreen: (String) -> Unit,
     popUpScreen: () -> Unit,
     viewModel: BoxDetailViewModel = hiltViewModel()
@@ -235,7 +239,8 @@ fun BoxDetailScreen(
                 currentImage = currentImage,
                 viewModel = viewModel,
                 onPhotoClick = { showPhotoSheet = true },
-                gpsPermissionLauncher = gpsPermissionLauncher
+                gpsPermissionLauncher = gpsPermissionLauncher,
+                localUri = localUri
             )
         }
     }
@@ -328,6 +333,7 @@ private fun ModernDetailTopBar(
 @Composable
 private fun BoxDetailContent(
     modifier: Modifier = Modifier,
+    localUri: String?,
     box: com.example.mobile_app.model.Box,
     draft: com.example.mobile_app.model.Box,
     isEditing: Boolean,
@@ -363,6 +369,7 @@ private fun BoxDetailContent(
                 BoxImageSection(
                     currentImage = currentImage,
                     isEditing = isEditing,
+                    localUri = viewModel.pendingUploadUri?.toString() ?: localUri,
                     onPhotoClick = onPhotoClick
                 )
 
@@ -444,6 +451,7 @@ private fun ModernInfoCard(content: @Composable ColumnScope.() -> Unit) {
 @Composable
 private fun BoxImageSection(
     currentImage: Any?,
+    localUri: String?,
     isEditing: Boolean,
     onPhotoClick: () -> Unit
 ) {
@@ -471,20 +479,53 @@ private fun BoxImageSection(
             .clickable(enabled = isEditing) { onPhotoClick() },
         contentAlignment = Alignment.Center
     ) {
+
         when {
+            // If image is uploading but we have the local image saved
+            imageUrlString == "UPLOADING" && localUri != null-> {
+                val decodedUri = URLDecoder.decode(localUri, StandardCharsets.UTF_8.toString())
+                AsyncImage(
+                    model = Uri.parse(decodedUri),
+                    contentDescription = "Preview",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
+            // If the image is uploading and there isn't the local image saved
             imageUrlString == "UPLOADING" -> {
                 UploadingIndicator()
             }
-            imageUrlString.isNotEmpty() && imageUrlString != "null" -> {
+            // Loading image from Firestore or local storage
+            imageUrlString.isNotEmpty()  -> {
                 SubcomposeAsyncImage(
                     model = currentImage,
                     contentDescription = "Box Image",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
-                    loading = { LoadingImagePlaceholder() },
-                    error = { ErrorImagePlaceholder() }
+                    loading = {
+                        if (localUri != null) {
+
+                            val decodedUri = URLDecoder.decode(localUri, StandardCharsets.UTF_8.toString())
+                            AsyncImage(
+                                model = Uri.parse(decodedUri),
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            LoadingImagePlaceholder()
+                        }
+                    },
+                    error = {
+                        if (localUri != null) {
+                            // Show loading
+                            LoadingImagePlaceholder()
+                    } else {
+                        ErrorImagePlaceholder()
+                    } }
                 )
             }
+            // No image in the box
             else -> {
                 EmptyImagePlaceholder()
             }

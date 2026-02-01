@@ -5,6 +5,7 @@ import android.net.Uri
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import dagger.hilt.android.qualifiers.ApplicationContext
 import com.example.mobile_app.model.Box
 import com.example.mobile_app.model.QrRequest
@@ -64,6 +65,9 @@ class StorageService @Inject constructor(
     }
 
     // 3. CREATE: Save a new box
+    fun getNewBoxId(): String {
+        return firestore.collection("boxes").document().id
+    }
     fun saveBox(box: Box, imageUri: Uri?) {
 
 
@@ -81,8 +85,8 @@ class StorageService @Inject constructor(
                 val nextNumber = currentUser.lastBoxNumber + 1
                 val generatedHumanId = "$nextNumber"
 
-                val newDocRef = firestore.collection("boxes").document()
-                val generatedId = newDocRef.id
+                val generatedId = box.boxId
+                val newDocRef = firestore.collection("boxes").document(generatedId)
 
                 val initialStatusImage = if (imageUri != null) "UPLOADING" else ""
 
@@ -260,15 +264,48 @@ class StorageService @Inject constructor(
     // Compress the image
     private fun getCompressedImage(uri: Uri): ByteArray? {
         return try {
-            // 1. Decode the image from the URI
-            val inputStream = context.contentResolver.openInputStream(uri)
+            val contentResolver = context.contentResolver
+
+            // 1. Read the rotation
+            // Read the rotation from the EXIF data
+            var inputStream = contentResolver.openInputStream(uri)
+            val exifInterface = inputStream?.let { androidx.exifinterface.media.ExifInterface(it) }
+            val orientation = exifInterface?.getAttributeInt(
+                androidx.exifinterface.media.ExifInterface.TAG_ORIENTATION,
+                androidx.exifinterface.media.ExifInterface.ORIENTATION_NORMAL
+            ) ?: androidx.exifinterface.media.ExifInterface.ORIENTATION_NORMAL
+            inputStream?.close()
+
+            // Compute the degrees of rotation
+            val rotationInDegrees = when (orientation) {
+                androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_90 -> 90
+                androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_180 -> 180
+                androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_270 -> 270
+                else -> 0
+            }
+
+            // 2. Read the image
+            inputStream = contentResolver.openInputStream(uri)
             val originalBitmap = BitmapFactory.decodeStream(inputStream)
             inputStream?.close()
 
-            // 2. Resize the image if necessary
+            if (originalBitmap == null) return null
+
+            // 3. Rotate the image if necessary
+            val rotatedBitmap = if (rotationInDegrees != 0) {
+                val matrix = Matrix()
+                matrix.postRotate(rotationInDegrees.toFloat())
+                Bitmap.createBitmap(
+                    originalBitmap, 0, 0, originalBitmap.width, originalBitmap.height, matrix, true
+                )
+            } else {
+                originalBitmap
+            }
+
+            // 4. Resize the image if necessary
             val maxDimension = 1024
-            var width = originalBitmap.width
-            var height = originalBitmap.height
+            var width = rotatedBitmap.width
+            var height = rotatedBitmap.height
 
             if (width > maxDimension || height > maxDimension) {
                 val ratio = width.toFloat() / height.toFloat()
@@ -280,11 +317,17 @@ class StorageService @Inject constructor(
                     width = (height * ratio).toInt()
                 }
             }
-            val resizedBitmap = Bitmap.createScaledBitmap(originalBitmap, width, height, true)
 
-            // 3. Compress the image to a ByteArray
+            val finalBitmap = Bitmap.createScaledBitmap(rotatedBitmap, width, height, true)
+
+            // 5. Compress
             val outputStream = ByteArrayOutputStream()
-            resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
+            finalBitmap.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
+
+            // Clean memory
+            if (originalBitmap != rotatedBitmap) originalBitmap.recycle()
+            if (rotatedBitmap != finalBitmap) rotatedBitmap.recycle()
+
             outputStream.toByteArray()
         } catch (e: Exception) {
             e.printStackTrace()

@@ -59,6 +59,9 @@ class BoxDetailViewModel @Inject constructor(
     var locationPredictions by mutableStateOf<List<AutocompleteResult>>(emptyList())
         private set
 
+    var pendingUploadUri: Uri? by mutableStateOf(null)
+        private set
+
     // Delete box
     var showDeleteDialog by mutableStateOf(false)
         private set
@@ -227,12 +230,16 @@ class BoxDetailViewModel @Inject constructor(
                 "titleSearch" to draftBox.title.lowercase(),
                 "description" to draftBox.description,
                 "fillStatus" to draftBox.fillStatus,
-                "isFragile" to draftBox.isFragile,
+                "fragile" to draftBox.isFragile,
                 "locationAddress" to draftBox.locationAddress
             )
 
             if (draftBox.location != null) {
                 updates["location"] = draftBox.location!!
+            }
+
+            if (newPhotoUri != null) {
+                pendingUploadUri = newPhotoUri
             }
 
             storageService.updateBoxFast(

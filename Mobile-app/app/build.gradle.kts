@@ -123,6 +123,9 @@ dependencies {
     //showQR
     implementation("io.coil-kt:coil-compose:2.6.0")
 
+    // Rotate image
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
+
     // CameraX core library using the camera2 implementation
     val cameraxVersion = "1.3.1" // Check for latest
     implementation("androidx.camera:camera-core:${cameraxVersion}")

@@ -24,6 +24,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -256,8 +257,17 @@ private fun BoxesList(
     ownerNames: Map<String, String>,
     onBoxClick: (String) -> Unit
 ) {
+    val listState = rememberLazyListState()
+
+    // Scroll to top when boxes change
+    LaunchedEffect(boxes.size) {
+        if (boxes.isNotEmpty()) {
+             listState.scrollToItem(0)
+        }
+    }
 
     LazyColumn(
+        state = listState,
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 1.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
