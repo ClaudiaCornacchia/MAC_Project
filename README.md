@@ -1,39 +1,41 @@
 
-# Boxly - Smart Box Management
+# Boxly - Box Management
 
 
 
 ## Overview
-**Boxly** is a smart inventory management solution that removes the stress of moving and storage handling by creating a digital twin for every physical box. 
+Boxly is an inventory management solution that removes the stress of moving and storage handling by creating a digital twin for every physical box. 
 Users can catalog box contents using text, speech recognition, or photos, and track each box’s location.   
-For every box, Boxly generates a unique QR code via a custom API service, which can be printed and attached to the physical box. Users can search for a specific item within the app to instantly identify which box it is stored in, or scan the QR code on a physical box to view its contents directly on their device.
+For every box, Boxly generates a unique QR code via a custom API service, which can be printed and attached to the physical box. Users can search for a specific item within the app to instantly identify which box it is stored in, or scan the QR code on the physical box to view its contents directly on their device.
 The app also supports real-time sharing, enabling families to collaborate.
 
 
 ## Key Features
 
-### Smart Box Management
-* **Detailed Cataloging:** add boxes with a title and manual description.
+* **Authentication:** sign-up and sign-in using **Firebase Authentication** with Email/Password and Google Sign-In options.
+### Box Management
+* **Detailed cataloging:** add boxes with a title, description and other details which are stored in **Firebase Firestore**.
 * Integrated **Speech-to-Text:** allows users to dictate box contents quickly, with visual 2D graphic waveforms representing audio input levels.
-* **Visual proof:** capture and upload a photo of the box contents directly to **Firebase Storage**.
+* **Photos:** capture and upload a photo of the box contents directly to **Firebase Storage**.
 * **Fill status:** visual 2D graphic indicators (Green/Yellow/Red) to represent if a box is Empty, Half-Full, or Full.
 * **Search functionality:** to find boxes by title or description keywords.
-* **Edit & Delete:** modify box details or remove boxes entirely.
+* **Edit and Delete:** modify box details or remove boxes entirely.
 * **Unused Box :** automatically filters boxes that haven't been accessed in over 12 months.
+* **Fragile alerts:** Haptic feedback (vibration) triggers when interacting with boxes marked as "Fragile."
 
 ### QR Code Integration
-* **Generation:** Custom QR codes are generated via a **Node.js REST API** (hosted on Google Cloud Run with Docker).
-* **Scanning:** Built-in scanner using **Google ML Kit** instantly decodes Box IDs and retrieves data from Firestore.
+* **Generation:** custom QR codes are generated via a Node.js REST API (hosted on **Google Cloud Run** with Docker).
+* **Scanning:** built-in scanner using **Google ML Kit** instantly decodes Box IDs and retrieves data from Firestore.
 
 ### Location
-* **GPS tracking:** Automatically saves the GPS coordinates where a box is stored using the FusedLocationProvider.
-* **Interactive maps:** View box locations on **Google Maps**.
-* **Smart suggestions:** Uses **Google Places SDK** to validate and suggest addresses during box creation.
-* **Ambient light sensor:** The app detects low-light environments using the device's light sensor and automatically suggests enabling the flashlight.
+* **GPS:** use the GPS coordinates to save where a box is stored using the FusedLocationProvider.
+* **Interactive maps:** view box locations on **Google Maps**.
+* **Smart suggestions:** uses **Google Places SDK** to validate and suggest addresses during box creation.
+* **Ambient light sensor:** the app detects low-light environments using the device's light sensor and automatically suggests enabling the flashlight.
 
 ### Collaborative
-* **Real-time sharing:** Share boxes with other users via email. Shared boxes appear instantly in the recipient's list.
-* **Fragile alerts:** Haptic feedback (vibration) triggers when interacting with boxes marked as "Fragile."
+* **Real-time sharing:** Share boxes with other users via email. Shared boxes appear instantly in the boxes screen. When a box is updated by any user, changes reflect in real-time for all collaborators.
+
 
 
 
