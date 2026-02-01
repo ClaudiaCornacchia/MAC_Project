@@ -1,0 +1,81 @@
+package com.example.mobile_app.presentation.authentication.sign_up
+
+
+import android.util.Log
+import androidx.credentials.Credential
+import androidx.credentials.CustomCredential
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+import com.example.mobile_app.BOXES_SCREEN
+import com.example.mobile_app.SIGN_UP_SCREEN
+import com.example.mobile_app.presentation.authentication.isValidEmail
+import com.example.mobile_app.presentation.authentication.isValidPassword
+import com.example.mobile_app.data.repository.AccountRepository
+import com.example.mobile_app.presentation.BoxAppViewModel
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import javax.inject.Inject
+
+const val UNEXPECTED_CREDENTIAL = "Unexpected credential type"
+const val ERROR_TAG = "BoxAppError"
+
+@HiltViewModel
+class SignUpViewModel @Inject constructor(
+    private val accountRepository: AccountRepository
+) : BoxAppViewModel() {
+    // Backing properties to avoid state updates from other classes
+    private val _email = MutableStateFlow("")
+    val email: StateFlow<String> = _email.asStateFlow()
+
+    private val _password = MutableStateFlow("")
+    val password: StateFlow<String> = _password.asStateFlow()
+
+    private val _confirmPassword = MutableStateFlow("")
+    val confirmPassword: StateFlow<String> = _confirmPassword.asStateFlow()
+
+    fun updateEmail(newEmail: String) {
+        _email.value = newEmail
+    }
+
+    fun updatePassword(newPassword: String) {
+        _password.value = newPassword
+    }
+
+    fun updateConfirmPassword(newConfirmPassword: String) {
+        _confirmPassword.value = newConfirmPassword
+    }
+
+    fun onSignUpClick(openAndPopUp: (String, String) -> Unit) {
+        launchCatching {
+            if (!_email.value.isValidEmail()) {
+                throw IllegalArgumentException("Invalid email format")
+            }
+
+            if (!_password.value.isValidPassword()) {
+                throw IllegalArgumentException("Invalid password format")
+            }
+
+            if (_password.value != _confirmPassword.value) {
+                throw IllegalArgumentException("Passwords do not match")
+            }
+
+            accountRepository.createAccount(_email.value, _password.value)
+            openAndPopUp(BOXES_SCREEN, SIGN_UP_SCREEN)
+        }
+    }
+
+    fun onSignUpWithGoogle(credential: Credential, openAndPopUp: (String, String) -> Unit) {
+        launchCatching {
+            if (credential is CustomCredential && credential.type == TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                // Use signInWithGoogle, if the account doesn't exists Firebase creates it
+                accountRepository.signInWithGoogle(googleIdTokenCredential.idToken)
+                openAndPopUp(BOXES_SCREEN, SIGN_UP_SCREEN)
+            } else {
+                Log.e(ERROR_TAG, UNEXPECTED_CREDENTIAL)
+            }
+        }
+    }
+}

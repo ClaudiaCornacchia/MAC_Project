@@ -1,7 +1,7 @@
 package com.example.mobile_app.di
 
 
-import com.example.mobile_app.model.service.QrApiService
+import com.example.mobile_app.data.remote.QrApiService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
