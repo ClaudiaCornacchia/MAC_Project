@@ -13,13 +13,13 @@ The app also supports real-time sharing, enabling families to collaborate.
 ## Key Features
 
 ### Smart Box Management
-* **Detailed Cataloging:** Add boxes with a title and manual description.
-* **Voice Memos:** Integrated **Speech-to-Text** allows users to dictate box contents quickly, with visual 2D graphic waveforms representing audio input levels.
-* **Visual proof:** Capture and upload a photo of the box contents directly to **Firebase Storage**.
-* **Fill status:** Visual 2D graphic indicators (Green/Yellow/Red) to represent if a box is Empty, Half-Full, or Full.
+* **Detailed Cataloging:** add boxes with a title and manual description.
+* Integrated **Speech-to-Text:** allows users to dictate box contents quickly, with visual 2D graphic waveforms representing audio input levels.
+* **Visual proof:** capture and upload a photo of the box contents directly to **Firebase Storage**.
+* **Fill status:** visual 2D graphic indicators (Green/Yellow/Red) to represent if a box is Empty, Half-Full, or Full.
 * **Search functionality:** to find boxes by title or description keywords.
-* **Edit & Delete:** Modify box details or remove boxes entirely.
-* **Unused Box :** Automatically filters boxes that haven't been accessed in over 12 months.
+* **Edit & Delete:** modify box details or remove boxes entirely.
+* **Unused Box :** automatically filters boxes that haven't been accessed in over 12 months.
 
 ### QR Code Integration
 * **Generation:** Custom QR codes are generated via a **Node.js REST API** (hosted on Google Cloud Run with Docker).
