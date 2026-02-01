@@ -71,10 +71,12 @@ class BoxDetailViewModel @Inject constructor(
             isUserAuthorized = false
         }
         else {
+
             launchCatching {
                 // Every time that you open the box detail page update last access
                 storageService.updateLastAccess(boxId)
-
+            }
+            launchCatching {
                 // Listen for changes in the box
                 storageService.getBox(boxId).collect { newBox ->
 

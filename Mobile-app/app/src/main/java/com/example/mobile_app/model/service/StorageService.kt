@@ -64,43 +64,45 @@ class StorageService @Inject constructor(
     }
 
     // 3. CREATE: Save a new box
-    suspend fun saveBox(box: Box, imageUri: Uri?) {
-        val userId = accountService.currentUserId
+    fun saveBox(box: Box, imageUri: Uri?) {
 
-        // 1. FETCH USER DATA, we need the freshest data from the server to avoid duplicates
-        val userDocRef = firestore.collection("users").document(userId)
-
-        val userSnapshot = userDocRef.get().await()
-        val currentUser = userSnapshot.toObject(User::class.java) ?: User()
-        // Human readable id
-        val nextNumber = currentUser.lastBoxNumber + 1
-        val generatedHumanId = "$nextNumber"
-
-        val newDocRef = firestore.collection("boxes").document()
-        val generatedId = newDocRef.id
-
-        val initialStatusImage = if (imageUri != null) "UPLOADING" else ""
-
-        // 2. Initial (fast) save
-        val initialBox = box.copy(
-            boxId = generatedId,
-            ownerId = userId,
-            sharedWith = listOf(userId),
-            titleSearch = box.title.lowercase(),
-            humanId = generatedHumanId,
-            imageUrl = initialStatusImage,
-            qrCodeUrl = ""
-        )
-
-        val batch = firestore.batch()
-        batch.set(newDocRef, initialBox)
-        batch.update(userDocRef, "lastBoxNumber", nextNumber)
-
-        batch.commit().await()
 
         // 3. Background upload, use applicationScope.launch
         applicationScope.launch {
             try {
+                val userId = accountService.currentUserId
+
+                // 1. FETCH USER DATA, we need the freshest data from the server to avoid duplicates
+                val userDocRef = firestore.collection("users").document(userId)
+                val userSnapshot = userDocRef.get().await()
+
+                val currentUser = userSnapshot.toObject(User::class.java) ?: User()
+                // Human readable id
+                val nextNumber = currentUser.lastBoxNumber + 1
+                val generatedHumanId = "$nextNumber"
+
+                val newDocRef = firestore.collection("boxes").document()
+                val generatedId = newDocRef.id
+
+                val initialStatusImage = if (imageUri != null) "UPLOADING" else ""
+
+                // 2. Initial (fast) save
+                val initialBox = box.copy(
+                    boxId = generatedId,
+                    ownerId = userId,
+                    sharedWith = listOf(userId),
+                    titleSearch = box.title.lowercase(),
+                    humanId = generatedHumanId,
+                    imageUrl = initialStatusImage,
+                    qrCodeUrl = ""
+                )
+
+                val batch = firestore.batch()
+                batch.set(newDocRef, initialBox)
+                batch.update(userDocRef, "lastBoxNumber", nextNumber)
+
+                batch.commit().await()
+
                 // A. Upload the image to Firebase Storage
                 var finalImageUrl = ""
                 if (imageUri != null) {
@@ -136,7 +138,6 @@ class StorageService @Inject constructor(
 
             } catch (e: Exception) {
                 e.printStackTrace()
-                firestore.collection("boxes").document(generatedId).update("imageUrl", "").await()
             }
         }
 
