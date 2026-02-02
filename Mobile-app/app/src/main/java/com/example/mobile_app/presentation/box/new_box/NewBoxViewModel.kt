@@ -254,7 +254,6 @@ class NewBoxViewModel @Inject constructor(
                 "BoxDetailScreen/$newId"
             }
 
-            // 5. Andiamo!
             navigate(targetRoute)
         }
     }
