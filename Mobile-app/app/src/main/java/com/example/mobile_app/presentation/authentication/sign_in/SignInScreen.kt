@@ -65,7 +65,7 @@ fun SignInScreen(
     val password = viewModel.password.collectAsState()
     var passwordVisible by remember { mutableStateOf(false) }
 
-    // YOUR ORIGINAL LOGIC - UNCHANGED
+
     LaunchedEffect(Unit) {
         launchCredManBottomSheet(context) { result ->
             viewModel.onSignInWithGoogle(result, openAndPopUp)
@@ -182,7 +182,7 @@ fun SignInScreen(
 
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-                        // Email Field - YOUR ORIGINAL LOGIC
+                        // Email Field
                         OutlinedTextField(
                             value = email.value,
                             onValueChange = { viewModel.updateEmail(it) },
@@ -204,7 +204,7 @@ fun SignInScreen(
                             singleLine = true
                         )
 
-                        // Password Field - YOUR ORIGINAL LOGIC + Visibility Toggle
+                        // Password Field
                         OutlinedTextField(
                             value = password.value,
                             onValueChange = { viewModel.updatePassword(it) },
@@ -238,7 +238,7 @@ fun SignInScreen(
 
                         Spacer(modifier = Modifier.height(4.dp))
 
-                        // Sign In Button - YOUR ORIGINAL LOGIC
+                        // Sign In Button
                         Button(
                             onClick = { viewModel.onSignInClick(openAndPopUp) },
                             modifier = Modifier
@@ -277,7 +277,7 @@ fun SignInScreen(
                     HorizontalDivider(modifier = Modifier.weight(1f))
                 }
 
-                // Google Sign In Button - YOUR ORIGINAL LOGIC wrapped in modern card
+                // Google Sign In Button
 
                 AuthenticationButton(buttonText = R.string.sign_in_with_google) { credential ->
                     viewModel.onSignInWithGoogle(credential, openAndPopUp)
@@ -286,7 +286,7 @@ fun SignInScreen(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Sign Up Link - YOUR ORIGINAL LOGIC
+                // Sign Up Link
                 Row(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically

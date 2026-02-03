@@ -88,12 +88,7 @@ fun SignUpScreen(
     val password = viewModel.password.collectAsState()
     val confirmPassword = viewModel.confirmPassword.collectAsState()
 
-    // YOUR ORIGINAL LOGIC - UNCHANGED
-    LaunchedEffect(Unit) {
-        launchCredManBottomSheet(context) { result ->
-            viewModel.onSignUpWithGoogle(result, openAndPopUp)
-        }
-    }
+
 
     Box(
         modifier = Modifier
@@ -202,7 +197,7 @@ fun SignUpScreen(
 
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-                        // Email Field - ORIGINAL LOGIC, NEW STYLE
+                        // Email Field
                         OutlinedTextField(
                             value = email.value,
                             onValueChange = { viewModel.updateEmail(it) },
@@ -224,7 +219,7 @@ fun SignUpScreen(
                             singleLine = true
                         )
 
-                        // Password Field - ORIGINAL LOGIC, NEW STYLE
+                        // Password Field
                         OutlinedTextField(
                             value = password.value,
                             onValueChange = { viewModel.updatePassword(it) },
@@ -237,7 +232,7 @@ fun SignUpScreen(
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                             },
-                            // Nota: Non ho aggiunto il toggle visibilità per non alterare la logica originale
+
                             visualTransformation = PasswordVisualTransformation(),
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
@@ -248,7 +243,7 @@ fun SignUpScreen(
                             singleLine = true
                         )
 
-                        // Confirm Password Field - ORIGINAL LOGIC, NEW STYLE
+                        // Confirm Password Field
                         OutlinedTextField(
                             value = confirmPassword.value,
                             onValueChange = { viewModel.updateConfirmPassword(it) },
@@ -273,7 +268,7 @@ fun SignUpScreen(
 
                         Spacer(modifier = Modifier.height(4.dp))
 
-                        // Sign Up Button - ORIGINAL LOGIC, NEW STYLE
+                        // Sign Up Button
                         Button(
                             onClick = { viewModel.onSignUpClick(openAndPopUp) },
                             modifier = Modifier
@@ -311,7 +306,7 @@ fun SignUpScreen(
                     HorizontalDivider(modifier = Modifier.weight(1f))
                 }
 
-                // Google Sign Up Button - ORIGINAL LOGIC
+                // Google Sign Up Button 
                 AuthenticationButton(R.string.sign_up_with_google) { result ->
                     viewModel.onSignUpWithGoogle(result, openAndPopUp)
                 }

@@ -112,7 +112,7 @@ fun BoxApp() {
                             val lux = event.values[0]
                             // Threshold: 10 lux is typical for "dim/dark room"
                             // We use a small buffer to avoid flickering
-                            isDarkEnvironment = lux < 10f
+                            isDarkEnvironment = lux < 40f
 
                         }
                     }
