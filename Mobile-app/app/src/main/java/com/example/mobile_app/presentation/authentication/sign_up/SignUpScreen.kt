@@ -306,7 +306,7 @@ fun SignUpScreen(
                     HorizontalDivider(modifier = Modifier.weight(1f))
                 }
 
-                // Google Sign Up Button 
+                // Google Sign Up Button
                 AuthenticationButton(R.string.sign_up_with_google) { result ->
                     viewModel.onSignUpWithGoogle(result, openAndPopUp)
                 }
