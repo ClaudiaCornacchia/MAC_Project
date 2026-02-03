@@ -65,7 +65,7 @@ fun AudioVisualizer(
             // Soglia minima
             if (targetLevel < 0.03f) targetLevel = 0.03f
 
-            // No smoothing
+            // Sliding window to show only the last spikes
             amplitudes.add(targetLevel)
             if (amplitudes.size > maxBars) {
                 amplitudes.removeAt(0)
@@ -95,6 +95,7 @@ fun AudioVisualizer(
         val startIndex = (maxBars - amplitudes.size).coerceAtLeast(0)
 
         amplitudes.forEachIndexed { index, amplitude ->
+            // Calculate the x-coordinate for the bar (with equal spacing)
             val visualIndex = index + startIndex
             val x = visualIndex * (barWidth + totalGapWidth) + (barWidth / 2)
 

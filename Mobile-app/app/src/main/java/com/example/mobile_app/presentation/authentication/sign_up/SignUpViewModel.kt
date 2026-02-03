@@ -54,7 +54,7 @@ class SignUpViewModel @Inject constructor(
             }
 
             if (!_password.value.isValidPassword()) {
-                throw IllegalArgumentException("Invalid password format")
+                throw IllegalArgumentException("Password needs 4+ chars, 1 uppercase, 1 lowercase, and 1 number.")
             }
 
             if (_password.value != _confirmPassword.value) {

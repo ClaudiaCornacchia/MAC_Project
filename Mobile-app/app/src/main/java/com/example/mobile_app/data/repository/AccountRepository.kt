@@ -62,6 +62,12 @@ class AccountRepository @Inject constructor() {
         // 2. Create the User object for Firestore
         val nameFromEmail = email.substringBefore("@")
 
+        // Update the user's display name in Firebase Auth
+        val profileUpdates = userProfileChangeRequest {
+            displayName = nameFromEmail
+        }
+        firebaseUser.updateProfile(profileUpdates).await()
+
         val newUser = User(
             id = firebaseUser.uid,
             email = email,
@@ -108,13 +114,15 @@ class AccountRepository @Inject constructor() {
     suspend fun deleteAccount() {
         val userId = currentUserId
 
-        // 1. Delete from Authentication
-        Firebase.auth.currentUser?.delete()?.await()
-
-        // 2. Delete from Firestore
+        // 1. Delete from Firestore
         if (userId.isNotEmpty()) {
             Firebase.firestore.collection("users").document(userId).delete().await()
         }
+
+        // 2. Delete from Authentication
+        Firebase.auth.currentUser?.delete()?.await()
+
+
     }
 
     //Used by BoxDetailViewmodel to retrieve the name of the users that shares the box

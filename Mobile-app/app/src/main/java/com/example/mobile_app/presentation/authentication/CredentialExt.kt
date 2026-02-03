@@ -59,6 +59,7 @@ fun AuthenticationButton(buttonText: Int, onRequestResult: (Credential) -> Unit)
     }
 }
 
+// Logic for Google sign in button
 private suspend fun launchCredManButtonUI(
     context: Context,
     onRequestResult: (Credential) -> Unit
@@ -72,6 +73,7 @@ private suspend fun launchCredManButtonUI(
             .addCredentialOption(signInWithGoogleOption)
             .build()
 
+        // To show the Google sign-in sheet to the user.
         val result = CredentialManager.create(context).getCredential(
             request = request,
             context = context
@@ -86,9 +88,10 @@ private suspend fun launchCredManButtonUI(
     }
 }
 
+// Suggesting Google accounts immediately when a screen loads
 suspend fun launchCredManBottomSheet(
     context: Context,
-    hasFilter: Boolean = true,
+    hasFilter: Boolean = true, // accounts the user has already used to sign in to this app previously
     onRequestResult: (Credential) -> Unit
 ) {
     try {
@@ -107,6 +110,7 @@ suspend fun launchCredManBottomSheet(
         )
 
         onRequestResult(result.credential)
+        // If the user has never logged in in this app with a Google account show all the available Google accounts on the phone
     } catch (e: NoCredentialException) {
         Log.d(ERROR_TAG, e.message.orEmpty())
 
