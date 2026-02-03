@@ -28,9 +28,9 @@ The app also supports real-time sharing, enabling families to collaborate.
 * **Scanning:** built-in scanner using **Google ML Kit** instantly decodes Box IDs and retrieves data from Firestore.
 
 ### Location
-* **GPS:** use the GPS coordinates to save where a box is stored using the FusedLocationProvider.
+* Save where a box is stored using the FusedLocationProvider.
 * **Interactive maps:** view box locations on **Google Maps**.
-* **Smart suggestions:** uses **Google Places SDK** to validate and suggest addresses during box creation.
+* **Smart suggestions:** uses **Google Places API** to validate and suggest addresses during box creation.
 * **Ambient light sensor:** the app detects low-light environments using the device's light sensor and automatically suggests enabling the flashlight.
 
 ### Collaborative

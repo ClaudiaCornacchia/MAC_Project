@@ -4,6 +4,7 @@ import android.app.DownloadManager
 import android.content.Context
 import android.net.Uri
 import android.os.Environment
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -74,11 +75,15 @@ class BoxDetailViewModel @Inject constructor(
             isUserAuthorized = false
         }
         else {
-
             launchCatching {
-                // Every time that you open the box detail page update last access
-                storageRepository.updateLastAccess(boxId)
+                try {
+                    // Every time that you open the box detail page update last access
+                    storageRepository.updateLastAccess(boxId)
+                } catch (e: Exception) {
+                    Log.w("BoxDebug", "update: ${e.message}")
+                }
             }
+
             launchCatching {
                 // Listen for changes in the box
                 storageRepository.getBox(boxId).collect { newBox ->
