@@ -196,7 +196,7 @@ private fun ProfileInfoCard(
                     )
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        displayName.ifBlank { "Not set" },
+                        displayName.ifBlank { "andrea" },
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (displayName.isBlank())
                             MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
