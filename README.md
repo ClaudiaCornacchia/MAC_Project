@@ -1,7 +1,10 @@
 
 # Boxly - Box Management
 
-
+![Android](https://img.shields.io/badge/Platform-Android-3DDC84?logo=android&logoColor=white)
+![Kotlin](https://img.shields.io/badge/Language-Kotlin-7F52FF?logo=kotlin&logoColor=white)
+![Firebase](https://img.shields.io/badge/Backend-Firebase-FFCA28?logo=firebase&logoColor=black)
+![Docker & Node](https://img.shields.io/badge/API-Node.js%20%7C%20Docker-2496ED?logo=docker&logoColor=white)
 
 ## Overview
 Boxly is an inventory management solution that removes the stress of moving and storage handling by creating a digital twin for every physical box. 
